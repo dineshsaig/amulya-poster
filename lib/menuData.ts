@@ -104,3 +104,12 @@ export const DEFAULT_ACCOMPANIMENTS: MenuItem[] = [
   { id: 'a7', name: 'Raita',       category: 'accompaniment', isDefault: true, isActive: true, sortOrder: 7 },
   { id: 'a8', name: 'Roti Chutney',category: 'accompaniment', isDefault: true, isActive: true, sortOrder: 8 },
 ];
+
+export function getAllMenuItems() {
+  return {
+    veg: DEFAULT_VEG_ITEMS,
+    nonVeg: DEFAULT_NON_VEG_ITEMS,
+    desserts: DEFAULT_DESSERTS,
+    accompaniments: DEFAULT_ACCOMPANIMENTS,
+  };
+}

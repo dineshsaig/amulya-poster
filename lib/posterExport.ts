@@ -2,23 +2,25 @@ import jsPDF from 'jspdf';
 import { PosterConfig } from '@/types';
 
 /*
- * Direct Canvas 2D drawing — 100% reliable PNG export
- * Template: Canva design 1024x1536px
+ * Direct Canvas 2D drawing on ChatGPT template (1024×1819px)
  *
- * Verified box positions:
- *   TITLE:    x=120, y=225, w=770, h=110
- *   VEG:      x=38,  y=496, w=277, h=590
- *   SIDES:    x=351, y=496, w=296, h=440
- *   DESSERTS: x=351, y=960, w=296, h=125
- *   NONVEG:   x=683, y=496, w=302, h=590
+ * Pixel-verified box positions:
+ *   TITLE:    x=120,  y=220,  w=770, h=160
+ *   VEG:      x=35,   y=555,  w=283, h=800
+ *   SIDES:    x=354,  y=555,  w=301, h=600
+ *   DESSERTS: x=354,  y=1155, w=301, h=200
+ *   NONVEG:   x=690,  y=555,  w=299, h=800
  */
 
+const W = 1024;
+const H = 1819;
+
 const BOXES = {
-  title:    { x: 120, y: 225, w: 770, h: 110 },
-  veg:      { x: 38,  y: 496, w: 277, h: 590 },
-  sides:    { x: 351, y: 496, w: 296, h: 440 },
-  desserts: { x: 351, y: 960, w: 296, h: 125 },
-  nonveg:   { x: 683, y: 496, w: 302, h: 590 },
+  title:    { x: 120, y: 220,  w: 770, h: 160 },
+  veg:      { x: 35,  y: 555,  w: 283, h: 800 },
+  sides:    { x: 354, y: 555,  w: 301, h: 600 },
+  desserts: { x: 354, y: 1155, w: 301, h: 200 },
+  nonveg:   { x: 690, y: 555,  w: 299, h: 800 },
 };
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -26,8 +28,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload  = () => resolve(img);
-    img.onerror = () => reject(new Error(`Failed to load: ${src}`));
-    img.src = src;
+    img.onerror = () => reject(new Error(`Failed: ${src}`));
+    img.src = src + '?v=' + Date.now(); // cache bust
   });
 }
 
@@ -37,35 +39,30 @@ function drawItems(
   box: { x: number; y: number; w: number; h: number },
   dotColor: string,
   fontName: string,
-  minFont = 18,
-  maxFont = 32,
+  minFont = 20,
+  maxFont = 38,
 ) {
   if (items.length === 0) return;
-
-  const fontSize = Math.max(minFont, Math.min(maxFont, (box.h / items.length) / 1.5));
+  const fontSize = Math.max(minFont, Math.min(maxFont, (box.h / items.length) / 1.55));
   const lineH    = box.h / items.length;
-  const dotR     = Math.max(6, fontSize * 0.22);
+  const dotR     = Math.max(7, fontSize * 0.23);
   const textX    = box.x + dotR * 2 + 10;
-  const maxTextW = box.w - dotR * 2 - 14;
+  const maxTextW = box.w - dotR * 2 - 18;
 
   ctx.font         = `${fontSize}px "${fontName}", "Palatino Linotype", Georgia, serif`;
   ctx.textBaseline = 'middle';
 
   items.forEach((item, i) => {
     const cy = box.y + i * lineH + lineH / 2;
-
-    // Bullet
+    // Dot
     ctx.beginPath();
     ctx.arc(box.x + dotR + 2, cy, dotR, 0, Math.PI * 2);
     ctx.fillStyle = dotColor;
     ctx.fill();
-
-    // Text — truncate if needed
+    // Text
     ctx.fillStyle = '#1A0800';
     let text = item.name;
-    while (ctx.measureText(text).width > maxTextW && text.length > 4) {
-      text = text.slice(0, -1);
-    }
+    while (ctx.measureText(text).width > maxTextW && text.length > 4) text = text.slice(0, -1);
     if (text !== item.name) text = text.slice(0, -2) + '…';
     ctx.fillText(text, textX, cy);
   });
@@ -78,70 +75,57 @@ export async function generatePosterCanvas(
   const { day, mealType, vegItems, nonVegItems, desserts, accompaniments } = config;
 
   const templateImg = await loadImage('/poster-template.png');
+  const canvas = document.createElement('canvas');
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
 
-  const canvas  = document.createElement('canvas');
-  canvas.width  = 1024;
-  canvas.height = 1536;
-  const ctx     = canvas.getContext('2d')!;
+  ctx.drawImage(templateImg, 0, 0, W, H);
 
-  // Draw background template
-  ctx.drawImage(templateImg, 0, 0, 1024, 1536);
-
-  // ── TITLE ──
+  // TITLE
   const titleText = `${day} ${mealType} Buffet`;
-  const titleSize = titleText.length > 22 ? 52 : titleText.length > 18 ? 60 : 68;
+  const titleSize = titleText.length > 22 ? 56 : titleText.length > 18 ? 64 : 72;
   ctx.font         = `900 ${titleSize}px "${fontName}", Georgia, serif`;
   ctx.fillStyle    = '#5C0A00';
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(
-    titleText,
-    BOXES.title.x + BOXES.title.w / 2,
-    BOXES.title.y + BOXES.title.h / 2,
-  );
+  ctx.fillText(titleText, BOXES.title.x + BOXES.title.w / 2, BOXES.title.y + BOXES.title.h / 2);
   ctx.textAlign = 'left';
 
-  // ── VEG ITEMS ──
-  drawItems(ctx, vegItems, BOXES.veg, '#2E7D32', fontName, 18, 32);
+  // VEG
+  drawItems(ctx, vegItems, BOXES.veg, '#2E7D32', fontName, 20, 38);
 
-  // ── SIDES ──
-  // If desserts exist, shrink sides to make room
+  // SIDES — shrink if desserts exist
   const sidesBox = { ...BOXES.sides };
-  if (desserts.length > 0) {
-    sidesBox.h = BOXES.desserts.y - BOXES.sides.y - 10;
-  }
-  drawItems(ctx, accompaniments, sidesBox, '#8B6914', fontName, 16, 26);
+  if (desserts.length > 0) sidesBox.h = BOXES.desserts.y - BOXES.sides.y - 10;
+  drawItems(ctx, accompaniments, sidesBox, '#8B6914', fontName, 18, 30);
 
-  // ── DESSERTS ──
+  // DESSERTS
   if (desserts.length > 0) {
-    drawItems(ctx, desserts, BOXES.desserts, '#8B4513', fontName, 16, 26);
+    drawItems(ctx, desserts, BOXES.desserts, '#8B4513', fontName, 18, 30);
   }
 
-  // ── NON-VEG ITEMS ──
-  drawItems(ctx, nonVegItems, BOXES.nonveg, '#B71C1C', fontName, 18, 32);
+  // NON-VEG
+  drawItems(ctx, nonVegItems, BOXES.nonveg, '#B71C1C', fontName, 20, 38);
 
   return canvas;
 }
 
 export async function downloadPNG(
-  _elementId: string,
-  filename: string,
-  config?: PosterConfig,
-  fontName?: string,
+  _id: string, filename: string,
+  config?: PosterConfig, fontName?: string,
 ): Promise<void> {
   if (!config) throw new Error('Config required');
   const canvas = await generatePosterCanvas(config, fontName);
-  const link   = document.createElement('a');
+  const link = document.createElement('a');
   link.download = `${filename}.png`;
   link.href     = canvas.toDataURL('image/png', 1.0);
   link.click();
 }
 
 export async function downloadPDF(
-  _elementId: string,
-  filename: string,
-  config?: PosterConfig,
-  fontName?: string,
+  _id: string, filename: string,
+  config?: PosterConfig, fontName?: string,
 ): Promise<void> {
   if (!config) throw new Error('Config required');
   const canvas  = await generatePosterCanvas(config, fontName);

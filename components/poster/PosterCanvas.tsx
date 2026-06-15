@@ -13,26 +13,18 @@ export default function PosterCanvas({
 }: PosterCanvasProps) {
   const { day, mealType, vegItems, nonVegItems, desserts, accompaniments } = config;
 
-  /*
-   * New Canva template positions (1024×1536px):
-   *   TITLE:    x=120, y=225, w=770, h=110
-   *   VEG:      x=38,  y=496, w=277, h=590
-   *   SIDES:    x=351, y=496, w=296, h=440
-   *   DESSERTS: x=351, y=960, w=296, h=125
-   *   NONVEG:   x=683, y=496, w=302, h=590
-   */
+  const sidesH   = desserts.length > 0 ? (1155 - 555 - 10) : 600;
 
-  const calcSizes = (count: number, boxH: number, min = 16, max = 32) => {
-    if (count === 0) return { fontSize: max, lineH: max * 1.5 };
-    const lineH = Math.min(max * 1.5, boxH / count);
-    return { fontSize: Math.max(min, Math.min(max, lineH / 1.5)), lineH };
+  const calcSizes = (count: number, boxH: number, min = 20, max = 38) => {
+    if (count === 0) return { fontSize: max, lineH: max * 1.55 };
+    const lineH = Math.min(max * 1.55, boxH / count);
+    return { fontSize: Math.max(min, Math.min(max, lineH / 1.55)), lineH };
   };
 
-  const sidesH   = desserts.length > 0 ? (960 - 496 - 10) : 440;
-  const vegS     = calcSizes(vegItems.length,       590);
-  const nonvegS  = calcSizes(nonVegItems.length,    590);
-  const sidesS   = calcSizes(accompaniments.length, sidesH, 14, 26);
-  const dessertS = calcSizes(desserts.length,       125, 14, 24);
+  const vegS     = calcSizes(vegItems.length,       800);
+  const nonvegS  = calcSizes(nonVegItems.length,    800);
+  const sidesS   = calcSizes(accompaniments.length, sidesH, 18, 30);
+  const dessertS = calcSizes(desserts.length,       200, 18, 30);
 
   const Item = ({ name, dot, sizes, maxW }: {
     name: string; dot: string;
@@ -45,17 +37,20 @@ export default function PosterCanvas({
       fontFamily, fontWeight: 400,
     }}>
       <span style={{
-        width: Math.max(8, sizes.fontSize * 0.44),
-        height: Math.max(8, sizes.fontSize * 0.44),
+        width: Math.max(9, sizes.fontSize * 0.46),
+        height: Math.max(9, sizes.fontSize * 0.46),
         borderRadius: '50%', background: dot,
         flexShrink: 0, display: 'inline-block',
-        marginRight: Math.max(6, sizes.fontSize * 0.3),
+        marginRight: Math.max(8, sizes.fontSize * 0.32),
       }}/>
       <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth: maxW }}>
         {name}
       </span>
     </div>
   );
+
+  const titleText = `${day} ${mealType} Buffet`;
+  const titleSize = titleText.length > 22 ? 56 : titleText.length > 18 ? 64 : 72;
 
   return (
     <div style={{ position: 'relative', width: 1024, overflow: 'hidden', fontFamily }}>
@@ -64,38 +59,34 @@ export default function PosterCanvas({
 
       {/* TITLE */}
       <div style={{
-        position: 'absolute', left: 120, top: 225, width: 770, height: 110,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 10, textAlign: 'center',
+        position: 'absolute', left: 120, top: 220, width: 770, height: 160,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
       }}>
-        <div style={{
-          fontSize: `${day.length + mealType.length > 18 ? 52 : 66}px`,
-          fontWeight: 900, color: '#5C0A00', fontFamily, lineHeight: 1.05,
-        }}>
-          {day} {mealType} Buffet
+        <div style={{ fontSize: titleSize, fontWeight: 900, color: '#5C0A00', fontFamily, lineHeight: 1.05, textAlign: 'center' }}>
+          {titleText}
         </div>
       </div>
 
       {/* VEG */}
-      <div style={{ position:'absolute', left:38, top:496, width:277, height:590, overflow:'hidden', zIndex:10 }}>
-        {vegItems.map(i => <Item key={i.id} name={i.name} dot="#2E7D32" sizes={vegS} maxW={240}/>)}
+      <div style={{ position:'absolute', left:35, top:555, width:283, height:800, overflow:'hidden', zIndex:10 }}>
+        {vegItems.map(i => <Item key={i.id} name={i.name} dot="#2E7D32" sizes={vegS} maxW={248}/>)}
       </div>
 
       {/* SIDES */}
-      <div style={{ position:'absolute', left:351, top:496, width:296, height:sidesH, overflow:'hidden', zIndex:10 }}>
-        {accompaniments.map(i => <Item key={i.id} name={i.name} dot="#8B6914" sizes={sidesS} maxW={260}/>)}
+      <div style={{ position:'absolute', left:354, top:555, width:301, height:sidesH, overflow:'hidden', zIndex:10 }}>
+        {accompaniments.map(i => <Item key={i.id} name={i.name} dot="#8B6914" sizes={sidesS} maxW={266}/>)}
       </div>
 
       {/* DESSERTS */}
       {desserts.length > 0 && (
-        <div style={{ position:'absolute', left:351, top:960, width:296, height:125, overflow:'hidden', zIndex:10 }}>
-          {desserts.map(i => <Item key={i.id} name={i.name} dot="#8B4513" sizes={dessertS} maxW={260}/>)}
+        <div style={{ position:'absolute', left:354, top:1155, width:301, height:200, overflow:'hidden', zIndex:10 }}>
+          {desserts.map(i => <Item key={i.id} name={i.name} dot="#8B4513" sizes={dessertS} maxW={266}/>)}
         </div>
       )}
 
       {/* NON-VEG */}
-      <div style={{ position:'absolute', left:683, top:496, width:302, height:590, overflow:'hidden', zIndex:10 }}>
-        {nonVegItems.map(i => <Item key={i.id} name={i.name} dot="#B71C1C" sizes={nonvegS} maxW={265}/>)}
+      <div style={{ position:'absolute', left:690, top:555, width:299, height:800, overflow:'hidden', zIndex:10 }}>
+        {nonVegItems.map(i => <Item key={i.id} name={i.name} dot="#B71C1C" sizes={nonvegS} maxW={264}/>)}
       </div>
     </div>
   );

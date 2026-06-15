@@ -41,8 +41,8 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
     }
   }
 
-  const PREVIEW_SCALE = 0.29;
-  const PREVIEW_HEIGHT = Math.round(1536 * PREVIEW_SCALE);
+  const PREVIEW_SCALE = 0.25;
+  const PREVIEW_HEIGHT = Math.round(1819 * PREVIEW_SCALE);
 
   return (
     <div className="space-y-4">

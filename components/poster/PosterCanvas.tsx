@@ -7,11 +7,6 @@ interface PosterCanvasProps {
   fontFamily?: string;
 }
 
-/* Smart line break — only wrap if single word is very long */
-function renderLine(name: string) {
-  return name; // Keep full name on one line — CSS handles overflow
-}
-
 export default function PosterCanvas({
   config,
   fontFamily = '"Book Antiqua", "Palatino Linotype", Palatino, Georgia, serif',
@@ -19,31 +14,24 @@ export default function PosterCanvas({
   const { vegItems, nonVegItems, desserts, accompaniments } = config;
 
   /*
-   * Template: 1024×1536px (original quality)
-   * Pixel-verified box positions:
-   *   VEG:      left=50,  top=396, w=332, h=804
-   *   SIDES:    left=401, top=396, w=220, h=633
-   *   DESSERTS: left=401, top=1100,w=220, h=100
-   *   NONVEG:   left=645, top=396, w=332, h=804
+   * Pixel-verified box positions on 1024×1536 template:
+   *   VEG:      left=37,  top=404, w=278, h=796
+   *   SIDES:    left=351, top=404, w=298, h=633
+   *   DESSERTS: left=351, top=1100,w=298, h=100
+   *   NONVEG:   left=666, top=404, w=319, h=796
    */
 
-  const VEG_H     = 804;
-  const NONVEG_H  = 804;
-  const SIDES_H   = 633;
-  const DESSERT_H = 100;
-
-  /* Font size scales smoothly with item count */
-  const calcSizes = (count: number, boxH: number, minFont = 15, maxFont = 26) => {
+  const calcSizes = (count: number, boxH: number, minFont = 14, maxFont = 26) => {
     if (count === 0) return { fontSize: maxFont, lineH: maxFont * 1.6 };
     const lineH = Math.min(maxFont * 1.6, boxH / count);
     const fontSize = Math.max(minFont, Math.min(maxFont, lineH / 1.6));
-    return { fontSize, lineH: Math.max(lineH, fontSize * 1.3) };
+    return { fontSize, lineH };
   };
 
-  const vegS     = calcSizes(vegItems.length,      VEG_H);
-  const nonvegS  = calcSizes(nonVegItems.length,   NONVEG_H);
-  const sidesS   = calcSizes(accompaniments.length, SIDES_H, 13, 22);
-  const dessertS = calcSizes(desserts.length,       DESSERT_H, 13, 20);
+  const vegS     = calcSizes(vegItems.length,       796);
+  const nonvegS  = calcSizes(nonVegItems.length,    796);
+  const sidesS   = calcSizes(accompaniments.length, 633, 12, 22);
+  const dessertS = calcSizes(desserts.length,       100, 12, 20);
 
   const renderItems = (
     items: { id: string; name: string }[],
@@ -51,42 +39,33 @@ export default function PosterCanvas({
     sizes: { fontSize: number; lineH: number },
     boxWidth: number,
   ) => items.map((item) => (
-    <div
-      key={item.id}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        height: sizes.lineH,
-        fontSize: sizes.fontSize,
-        lineHeight: 1,
-        color: '#1A0800',
-        fontFamily,
-        fontWeight: 400,
-        letterSpacing: '0.01em',
-        overflow: 'hidden',
-      }}
-    >
+    <div key={item.id} style={{
+      display: 'flex', alignItems: 'center',
+      height: sizes.lineH,
+      fontSize: sizes.fontSize,
+      lineHeight: 1,
+      color: '#1A0800',
+      fontFamily,
+      fontWeight: 400,
+      letterSpacing: '0.01em',
+      overflow: 'hidden',
+    }}>
       <span style={{
-        width: 11, height: 11, borderRadius: '50%',
+        width: 12, height: 12, borderRadius: '50%',
         background: dotColor, flexShrink: 0,
-        display: 'inline-block', marginRight: 9,
+        display: 'inline-block', marginRight: 10,
       }}/>
       <span style={{
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        maxWidth: boxWidth - 24,
+        overflow: 'hidden', textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap', maxWidth: boxWidth - 26,
       }}>
-        {renderLine(item.name)}
+        {item.name}
       </span>
     </div>
   ));
 
   return (
-    <div
-      id="amulya-poster"
-      style={{ position: 'relative', width: 1024, fontFamily, overflow: 'hidden' }}
-    >
+    <div style={{ position: 'relative', width: 1024, fontFamily, overflow: 'hidden' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/poster-template.png"
@@ -95,26 +74,26 @@ export default function PosterCanvas({
         style={{ width: '100%', display: 'block' }}
       />
 
-      {/* VEG */}
-      <div style={{ position:'absolute', left:50, top:396, width:332, height:VEG_H, overflow:'hidden', zIndex:10 }}>
-        {renderItems(vegItems, '#2E7D32', vegS, 332)}
+      {/* VEG ITEMS */}
+      <div style={{ position:'absolute', left:37, top:404, width:278, height:796, overflow:'hidden', zIndex:10 }}>
+        {renderItems(vegItems, '#2E7D32', vegS, 278)}
       </div>
 
       {/* SIDES */}
-      <div style={{ position:'absolute', left:401, top:396, width:220, height:SIDES_H, overflow:'hidden', zIndex:10 }}>
-        {renderItems(accompaniments, '#8B6914', sidesS, 220)}
+      <div style={{ position:'absolute', left:351, top:404, width:298, height:633, overflow:'hidden', zIndex:10 }}>
+        {renderItems(accompaniments, '#8B6914', sidesS, 298)}
       </div>
 
       {/* DESSERTS */}
       {desserts.length > 0 && (
-        <div style={{ position:'absolute', left:401, top:1100, width:220, height:DESSERT_H, overflow:'hidden', zIndex:10 }}>
-          {renderItems(desserts, '#DAA520', dessertS, 220)}
+        <div style={{ position:'absolute', left:351, top:1100, width:298, height:100, overflow:'hidden', zIndex:10 }}>
+          {renderItems(desserts, '#DAA520', dessertS, 298)}
         </div>
       )}
 
-      {/* NON-VEG */}
-      <div style={{ position:'absolute', left:645, top:396, width:332, height:NONVEG_H, overflow:'hidden', zIndex:10 }}>
-        {renderItems(nonVegItems, '#B71C1C', nonvegS, 332)}
+      {/* NON-VEG ITEMS */}
+      <div style={{ position:'absolute', left:666, top:404, width:319, height:796, overflow:'hidden', zIndex:10 }}>
+        {renderItems(nonVegItems, '#B71C1C', nonvegS, 319)}
       </div>
     </div>
   );

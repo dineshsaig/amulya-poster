@@ -31,7 +31,6 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
     setShowSettings(false);
     setDownloading(type);
     try {
-      // Always use the hidden full-size element for export
       if (type === 'png') await downloadPNG('amulya-poster-export', filename);
       else await downloadPDF('amulya-poster-export', filename);
     } catch (err) {
@@ -41,11 +40,6 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
       setDownloading(null);
     }
   }
-
-  // Preview: scale 1024px down to ~300px wide = 0.29x
-  // Preview container height: 1536 * 0.29 ≈ 445px
-  const PREVIEW_SCALE = 0.29;
-  const PREVIEW_HEIGHT = Math.round(1536 * PREVIEW_SCALE);
 
   return (
     <div className="space-y-4">
@@ -63,8 +57,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         <button
           onClick={() => setShowSettings(s => !s)}
           className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-all cursor-pointer ${
-            showSettings
-              ? 'bg-amber-700/20 border-amber-600/40 text-amber-300'
+            showSettings ? 'bg-amber-700/20 border-amber-600/40 text-amber-300'
               : 'bg-stone-800/60 border-stone-700/40 text-stone-400 hover:text-stone-200'
           }`}
         >
@@ -83,9 +76,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
           <div className="text-[10px] text-amber-600 uppercase tracking-widest font-semibold">Font Style</div>
           <div className="space-y-1.5">
             {FONT_OPTIONS.map(font => (
-              <button
-                key={font.id}
-                onClick={() => setSelectedFont(font.id)}
+              <button key={font.id} onClick={() => setSelectedFont(font.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-all cursor-pointer ${
                   selectedFont === font.id
                     ? 'bg-amber-700/20 border-amber-600/40 text-amber-200'
@@ -94,7 +85,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
               >
                 <div className="flex justify-between items-center">
                   <span style={{ fontFamily: font.value }}>{font.label}</span>
-                  {selectedFont === font.id && <span className="text-amber-400 text-xs">✓ Active</span>}
+                  {selectedFont === font.id && <span className="text-amber-400 text-xs">✓</span>}
                 </div>
                 <div className="text-[10px] opacity-50 mt-0.5" style={{ fontFamily: font.value }}>
                   Tomato Dal · Gulab Jamun · Apollo Fish
@@ -105,27 +96,21 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         </div>
       )}
 
-      {/* ── SCALED PREVIEW (display only, NOT exported) ── */}
-      <div
-        className="flex justify-center overflow-hidden rounded-lg"
-        style={{ height: PREVIEW_HEIGHT }}
-      >
-        <div style={{
-          transform: `scale(${PREVIEW_SCALE})`,
-          transformOrigin: 'top center',
-          width: 1024,
-          flexShrink: 0,
-        }}>
-          {/* Preview version — not used for export */}
+      {/* ── PREVIEW — CSS scaled for display only ── */}
+      <div className="flex justify-center overflow-hidden rounded-lg border border-stone-700/20"
+        style={{ height: 450 }}>
+        <div style={{ transform: 'scale(0.29)', transformOrigin: 'top center', width: 1024, flexShrink: 0 }}>
           <PosterCanvas config={config} fontFamily={currentFont} />
         </div>
       </div>
 
-      {/* ── HIDDEN FULL-SIZE ELEMENT — this is what gets exported ── */}
+      {/* ── EXPORT ELEMENT — off-screen, full size, NO visibility:hidden ── */}
+      {/* opacity:0 + pointer-events:none is safe for html2canvas unlike visibility:hidden */}
       <div style={{
-        position: 'fixed', left: '-9999px', top: '0px',
-        width: '1024px', zIndex: -1, pointerEvents: 'none',
-        visibility: 'hidden',
+        position: 'fixed', left: '-1100px', top: 0,
+        width: 1024, zIndex: -999,
+        opacity: 1,   /* must NOT be visibility:hidden — breaks html2canvas */
+        pointerEvents: 'none',
       }}>
         <div id="amulya-poster-export">
           <PosterCanvas config={config} fontFamily={currentFont} />

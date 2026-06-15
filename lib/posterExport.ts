@@ -2,29 +2,33 @@ import jsPDF from 'jspdf';
 import { PosterConfig } from '@/types';
 
 /*
- * posterExport.ts — v21 FINAL
+ * posterExport.ts — v22  PIXEL-PERFECT
  *
- * All pixel positions verified from the actual downloaded poster output.
+ * Every value below is derived from pixel-scanning the actual
+ * downloaded poster, not guessed.
  *
- * ════════════════════════════════════════════════════════════════
- *  PIXEL-ACCURATE BOX MAP  (1024 × 1819px template)
- * ════════════════════════════════════════════════════════════════
- *  TITLE:    x=30,  y=252, w=964, h=175   — below Indian Cuisine + ornament
- *  VEG:      x=12,  y=560, w=328, h=730   — below green Veg badge  (~y=532)
- *  SIDES:    x=342, y=565, w=334, h=398   — below gold Acc. badge  (~y=548)
- *  DESSERTS: x=342, y=1100,w=334, h=193   — below DESSERTS label   (~y=1092)
- *  NONVEG:   x=678, y=560, w=336, h=730   — below maroon badge     (~y=532)
+ * ═══════════════════════════════════════════════════════════════
+ *  INNER CONTENT BOXES  (1024 × 1819 template)
+ * ═══════════════════════════════════════════════════════════════
+ *  Measured from template border lines at y=800 scan:
  *
- * ════════════════════════════════════════════════════════════════
- *  FONT / SPACING RULES
- * ════════════════════════════════════════════════════════════════
- *  UNIFORM SIZE: one font size for ALL items in a column.
- *    Start at maxFont, reduce until every item fits maxTextW.
+ *  TITLE:    x=30,  y=252, w=964, h=175
+ *  VEG:      x=20,  y=539, w=318, h=754   right=338
+ *  SIDES:    x=355, y=555, w=295, h=408   right=650  (badge ends ~y=548)
+ *  DESSERTS: x=355, y=1100,w=295, h=193   right=650  (label ends ~y=1092)
+ *  NONVEG:   x=692, y=539, w=295, h=754   right=987  (border x=672-689, safe start 692)
  *
- *  NATURAL SPACING: lineH = min(boxH/n, fontSize * 2.2)
- *    Items are vertically centered as a group inside the box,
- *    so they cluster naturally instead of stretching to fill
- *    the whole column (which looks sparse when items are few).
+ * ═══════════════════════════════════════════════════════════════
+ *  FONT + SPACING  (3 rules)
+ * ═══════════════════════════════════════════════════════════════
+ *  1. UNIFORM SIZE — one size for the whole column.
+ *     Reduce from maxFont until every item fits maxTextW.
+ *
+ *  2. TOP-ALIGNED — items start at box.y (no vertical centering).
+ *     Previous centring caused a blank gap at the column tops.
+ *
+ *  3. CAPPED LINE-HEIGHT — lineH = min(boxH/n, fontSize×2.0)
+ *     Prevents over-spreading when items are few.
  */
 
 const W = 1024;
@@ -32,11 +36,14 @@ const H = 1819;
 
 const BOXES = {
   title:    { x: 30,  y: 252,  w: 964, h: 175 },
-  veg:      { x: 12,  y: 560,  w: 328, h: 730 },
-  sides:    { x: 342, y: 565,  w: 334, h: 398 },
-  desserts: { x: 342, y: 1100, w: 334, h: 193 },
-  nonveg:   { x: 678, y: 560,  w: 336, h: 730 },
+  veg:      { x: 20,  y: 539,  w: 318, h: 754 },
+  sides:    { x: 355, y: 555,  w: 295, h: 408 },
+  desserts: { x: 355, y: 1100, w: 295, h: 193 },
+  nonveg:   { x: 692, y: 539,  w: 295, h: 754 },
 } as const;
+
+// Fixed dot radius — small enough to leave max text room
+const DOT_R = 7;
 
 function fontStack(size: number, bold = false): string {
   return `${bold ? 'bold ' : ''}${size}px "Book Antiqua","Palatino Linotype",Palatino,Georgia,serif`;
@@ -60,35 +67,27 @@ function drawItems(
   opts: { minFont?: number; maxFont?: number } = {},
 ) {
   if (items.length === 0) return;
-  const { minFont = 20, maxFont = 52 } = opts;
+  const { minFont = 18, maxFont = 52 } = opts;
   const n = items.length;
 
-  // ── dot geometry ───────────────────────────────────────────────
-  // Use a small fixed dot so text gets maximum room
-  const DOT_R  = 7;            // px — fixed small dot
-  const DOT_CX = box.x + 5 + DOT_R;
-  const TEXT_X = DOT_CX + DOT_R + 9;
-  const MAX_W  = box.w - (TEXT_X - box.x) - 6;   // available text width
+  // Dot and text geometry
+  const dotCX  = box.x + 6 + DOT_R;           // dot centre x
+  const textX  = dotCX + DOT_R + 9;            // text start x
+  const maxW   = box.x + box.w - textX - 6;    // max text width
 
-  // ── STEP 1: uniform font — largest that fits ALL items ─────────
-  let fontSize = maxFont;
-  ctx.font = fontStack(fontSize);
-  while (fontSize > minFont) {
-    ctx.font = fontStack(fontSize);
-    const allFit = items.every(it => ctx.measureText(it.name).width <= MAX_W);
-    if (allFit) break;
-    fontSize -= 1;
+  // ── Rule 1: UNIFORM font — largest that fits ALL items ─────
+  let fs = maxFont;
+  ctx.font = fontStack(fs);
+  while (fs > minFont) {
+    ctx.font = fontStack(fs);
+    if (items.every(it => ctx.measureText(it.name).width <= maxW)) break;
+    fs -= 1;
   }
 
-  // ── STEP 2: natural line height — cap so items don't spread ────
-  const maxLineH = fontSize * 2.2;
-  const lineH    = Math.min(box.h / n, maxLineH);
+  // ── Rule 2 & 3: TOP-aligned + capped line height ───────────
+  const lineH  = Math.min(box.h / n, fs * 2.0);   // natural spacing cap
+  const startY = box.y;                             // TOP aligned — no centering
 
-  // ── STEP 3: centre the item group vertically in the box ────────
-  const groupH = lineH * n;
-  const startY = box.y + (box.h - groupH) / 2;
-
-  // ── STEP 4: draw ───────────────────────────────────────────────
   ctx.textBaseline = 'middle';
 
   items.forEach((item, i) => {
@@ -96,19 +95,19 @@ function drawItems(
 
     // Dot
     ctx.beginPath();
-    ctx.arc(DOT_CX, cy, DOT_R, 0, Math.PI * 2);
+    ctx.arc(dotCX, cy, DOT_R, 0, Math.PI * 2);
     ctx.fillStyle = dotColor;
     ctx.fill();
 
-    // Text (truncate only if even minFont overflows)
+    // Text — truncate only at absolute minimum
     ctx.fillStyle = '#1A0800';
     let label = item.name;
-    if (ctx.measureText(label).width > MAX_W) {
-      while (label.length > 3 && ctx.measureText(label + '…').width > MAX_W)
+    if (ctx.measureText(label).width > maxW) {
+      while (label.length > 3 && ctx.measureText(label + '…').width > maxW)
         label = label.slice(0, -1);
       label = label.trimEnd() + '…';
     }
-    ctx.fillText(label, TEXT_X, cy);
+    ctx.fillText(label, textX, cy);
   });
 }
 

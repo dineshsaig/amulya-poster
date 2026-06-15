@@ -48,7 +48,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
       {/* Poster preview */}
       <div className="flex justify-center">
         <div className="shadow-2xl shadow-black/60 ring-1 ring-amber-900/30 overflow-hidden"
-          style={{ transform: 'scale(0.72)', transformOrigin: 'top center', marginBottom: '-190px' }}>
+          style={{ transform: 'scale(0.68)', transformOrigin: 'top center', marginBottom: '-190px' }}>
           <PosterCanvas config={config} />
         </div>
       </div>

@@ -6,96 +6,94 @@ interface PosterCanvasProps {
   config: PosterConfig;
 }
 
-/* ══════════ SVG: horizontal gold rule with lotus centre ══════════ */
-function GoldRule({ id = 'a', flip = false }: { id?: string; flip?: boolean }) {
-  const gid = `gr-${id}`;
+/* ── thin gold ornament line ── */
+function GoldLine() {
   return (
-    <svg
-      viewBox="0 0 420 22"
-      style={{ display: 'block', width: '100%', transform: flip ? 'scaleY(-1)' : undefined }}
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <div style={{
+      height: 1,
+      background: 'linear-gradient(90deg, transparent, #B8860B 20%, #DAA520 50%, #B8860B 80%, transparent)',
+      margin: '3px 0',
+    }} />
+  );
+}
+
+/* ── decorative scroll divider ── */
+function ScrollDivider() {
+  return (
+    <svg viewBox="0 0 300 14" style={{ display:'block', width:'100%', height:14 }} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#8B5E0A" stopOpacity="0" />
-          <stop offset="18%"  stopColor="#C9922A" />
-          <stop offset="50%"  stopColor="#F0C060" />
-          <stop offset="82%"  stopColor="#C9922A" />
-          <stop offset="100%" stopColor="#8B5E0A" stopOpacity="0" />
+        <linearGradient id="sdg" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="#8B6914" stopOpacity="0"/>
+          <stop offset="40%"  stopColor="#DAA520"/>
+          <stop offset="60%"  stopColor="#DAA520"/>
+          <stop offset="100%" stopColor="#8B6914" stopOpacity="0"/>
         </linearGradient>
       </defs>
-      <line x1="0" y1="11" x2="420" y2="11" stroke={`url(#${gid})`} strokeWidth="1" />
-      {/* lotus bud centre */}
-      <ellipse cx="210" cy="11" rx="8" ry="5.5" fill="none" stroke="#C9922A" strokeWidth="1.1" />
-      <ellipse cx="210" cy="11" rx="4"  ry="3"   fill="#C9922A" />
-      {/* side accent diamonds */}
-      {[155, 265].map(cx => (
-        <polygon key={cx}
-          points={`${cx},11 ${cx-5},7 ${cx},3 ${cx+5},7`}
-          fill="none" stroke="#C9922A" strokeWidth="1" />
-      ))}
-      {/* tick marks */}
-      {[125,145,275,295].map(x => (
-        <line key={x} x1={x} y1="8" x2={x} y2="14" stroke="#C9922A" strokeWidth="0.8" />
-      ))}
+      <line x1="0" y1="7" x2="300" y2="7" stroke="url(#sdg)" strokeWidth="0.8"/>
+      <circle cx="150" cy="7" r="4" fill="none" stroke="#DAA520" strokeWidth="1"/>
+      <circle cx="150" cy="7" r="2" fill="#DAA520"/>
+      <circle cx="120" cy="7" r="2" fill="none" stroke="#DAA520" strokeWidth="0.8"/>
+      <circle cx="180" cy="7" r="2" fill="none" stroke="#DAA520" strokeWidth="0.8"/>
+      <line x1="100" y1="7" x2="115" y2="7" stroke="#DAA520" strokeWidth="0.8"/>
+      <line x1="185" y1="7" x2="200" y2="7" stroke="#DAA520" strokeWidth="0.8"/>
     </svg>
   );
 }
 
-/* ══════════ Corner bracket ══════════ */
-function Corner({ pos }: { pos: 'tl'|'tr'|'bl'|'br' }) {
-  const sx = pos.endsWith('r') ? -1 : 1;
-  const sy = pos.startsWith('b') ? -1 : 1;
+/* ── section header badge matching the reference design ── */
+function SectionBadge({ label, color }: { label: string; color: 'green' | 'maroon' | 'gold' }) {
+  const configs = {
+    green:  { bg: '#1B4D1B', border: '#DAA520', text: '#F5DEB3' },
+    maroon: { bg: '#5C0A14', border: '#DAA520', text: '#F5DEB3' },
+    gold:   { bg: '#8B6914', border: '#DAA520', text: '#FFFACD' },
+  };
+  const c = configs[color];
   return (
-    <svg
-      viewBox="0 0 48 48"
-      style={{
-        position: 'absolute', width: 48, height: 48,
-        top:    pos.startsWith('t') ? 8 : undefined,
-        bottom: pos.startsWith('b') ? 8 : undefined,
-        left:   pos.endsWith('l')   ? 8 : undefined,
-        right:  pos.endsWith('r')   ? 8 : undefined,
-        transform: `scale(${sx},${sy})`,
-        transformOrigin: pos.endsWith('r') ? 'right top' : 'left top',
-        pointerEvents: 'none',
-      }}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M4,4 Q4,28 28,28" fill="none" stroke="#C9922A" strokeWidth="1.3"/>
-      <line x1="4" y1="4" x2="28" y2="4" stroke="#C9922A" strokeWidth="1.3"/>
-      <line x1="4" y1="4" x2="4"  y2="28" stroke="#C9922A" strokeWidth="1.3"/>
-      <circle cx="4" cy="4" r="2.8" fill="#C9922A"/>
-      <circle cx="28" cy="4" r="1.4" fill="none" stroke="#C9922A" strokeWidth="0.9"/>
-      <circle cx="4" cy="28" r="1.4" fill="none" stroke="#C9922A" strokeWidth="0.9"/>
-    </svg>
-  );
-}
-
-/* ══════════ Section heading ══════════ */
-function SectionHead({ label }: { label: string }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '3px 0 4px' }}>
+    <div style={{
+      background: c.bg,
+      border: `2px solid ${c.border}`,
+      borderRadius: 4,
+      padding: '4px 8px',
+      textAlign: 'center',
+      marginBottom: 6,
+      boxShadow: `0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,215,0,0.2)`,
+    }}>
+      {/* gold top accent line */}
+      <div style={{ height:1, background:c.border, marginBottom:3, opacity:0.6 }}/>
       <span style={{
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: '0.22em',
+        fontSize: 11,
+        fontWeight: 800,
+        color: c.text,
+        letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: '#8B4A0A',
+        fontFamily: 'Georgia, serif',
+        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
       }}>
-        {label}
+        ✦ {label} ✦
       </span>
+      <div style={{ height:1, background:c.border, marginTop:3, opacity:0.6 }}/>
     </div>
   );
 }
 
-/* ══════════ Menu item row ══════════ */
-function Dot({ color }: { color: string }) {
+/* ── single menu item row ── */
+function MenuItem({ name, dot }: { name: string; dot: string }) {
   return (
-    <span style={{
-      display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-      background: color, flexShrink: 0, marginTop: 3.5,
-    }} />
+    <div style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:2.5 }}>
+      <span style={{
+        display:'inline-block', width:6, height:6, borderRadius:'50%',
+        background: dot, flexShrink:0, marginTop:3.5,
+      }}/>
+      <span style={{
+        fontSize: 10,
+        color: '#1A0A00',
+        lineHeight: 1.35,
+        fontFamily: 'Georgia, serif',
+        fontWeight: 500,
+      }}>
+        {name}
+      </span>
+    </div>
   );
 }
 
@@ -106,190 +104,245 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
     day: 'numeric', month: 'long', year: 'numeric',
   });
 
-  /* Responsive column layout: ≤4 items → 1 col, else 2 col */
-  const useOneCol = (items: typeof vegItems) => items.length <= 4;
-
-  const itemStyle: React.CSSProperties = {
-    fontSize: 10.5,
-    color: '#2D1A06',
-    lineHeight: 1.38,
-    fontFamily: 'Georgia, serif',
-  };
-
+  /* poster: 420 wide (rendered), exported at 3× = 1260px */
   return (
     <div
       id="amulya-poster"
       style={{
         position: 'relative',
         width: 420,
-        minHeight: 746,
         overflow: 'hidden',
         fontFamily: 'Georgia, "Times New Roman", serif',
-        /* parchment background */
-        background: [
-          'radial-gradient(ellipse at 15% 12%, rgba(200,130,30,0.07) 0%, transparent 50%)',
-          'radial-gradient(ellipse at 85% 88%, rgba(180,110,20,0.07) 0%, transparent 50%)',
-          'linear-gradient(168deg, #FAF0DC 0%, #F2E4C4 35%, #EADAAD 65%, #F2E4C4 100%)',
-        ].join(','),
+        background: 'linear-gradient(175deg, #FBF0D3 0%, #F5E6B8 40%, #EDD898 70%, #F5E6B8 100%)',
       }}
     >
-      {/* ── grain texture ── */}
+      {/* ── paper grain ── */}
       <div style={{
-        position:'absolute', inset:0, opacity:0.038, pointerEvents:'none',
-        backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")`,
+        position:'absolute', inset:0, opacity:0.04, pointerEvents:'none', zIndex:0,
+        backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")`,
         backgroundRepeat:'repeat',
       }}/>
 
-      {/* ── outer border ── */}
-      <div style={{
-        position:'absolute', inset:7, pointerEvents:'none',
-        border:'1.5px solid rgba(165,115,25,0.58)',
-      }}/>
-      {/* ── inner border ── */}
-      <div style={{
-        position:'absolute', inset:12, pointerEvents:'none',
-        border:'0.6px solid rgba(165,115,25,0.28)',
-      }}/>
+      {/* ── outer gold border ── */}
+      <div style={{ position:'absolute', inset:5, border:'2px solid #B8860B', zIndex:0, pointerEvents:'none' }}/>
+      <div style={{ position:'absolute', inset:9, border:'1px solid rgba(184,134,11,0.4)', zIndex:0, pointerEvents:'none' }}/>
 
-      {/* ── corner ornaments ── */}
-      <Corner pos="tl"/><Corner pos="tr"/><Corner pos="bl"/><Corner pos="br"/>
+      {/* ══════════ CONTENT ══════════ */}
+      <div style={{ position:'relative', zIndex:1, padding:'10px 14px 0' }}>
 
-      {/* ══════════════ CONTENT ══════════════ */}
-      <div style={{ position:'relative', zIndex:10, padding:'14px 22px 14px' }}>
+        {/* ── TOP ROW: badge | title | lady ── */}
+        <div style={{ display:'flex', alignItems:'flex-start', gap:0, marginBottom:4 }}>
 
-        {/* ── LOGO ── */}
-        <div style={{ textAlign:'center', marginBottom:4 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/amulya-logo.png"
-            alt="Amulya Indian Cuisine"
-            style={{ width: 228, display:'inline-block' }}
-            crossOrigin="anonymous"
-          />
+          {/* Fresh Homemade Authentic badge */}
+          <div style={{
+            width: 68,
+            height: 68,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, #1B4D1B 60%, #0F2D0F)',
+            border: '3px solid #DAA520',
+            display:'flex',
+            flexDirection:'column',
+            alignItems:'center',
+            justifyContent:'center',
+            flexShrink:0,
+            padding:4,
+            boxShadow:'0 3px 8px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{ textAlign:'center' }}>
+              {['FRESH','HOME','MADE','AUTHEN','TIC'].map((w,i)=>(
+                <div key={i} style={{
+                  fontSize: 7, fontWeight:800, color:'#F5DEB3',
+                  letterSpacing:'0.05em', lineHeight:1.2,
+                  textTransform:'uppercase',
+                }}>
+                  {w}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Centre: logo text + title */}
+          <div style={{ flex:1, textAlign:'center', padding:'0 4px' }}>
+            {/* Restaurant name */}
+            <div style={{ marginBottom:0 }}>
+              <div style={{
+                fontSize: 30,
+                fontWeight: 900,
+                color: '#8B1A10',
+                fontFamily: 'Georgia, serif',
+                lineHeight: 1,
+                textShadow: '1px 1px 0px rgba(0,0,0,0.15)',
+                letterSpacing: '-0.01em',
+              }}>
+                Amulya
+              </div>
+              <div style={{
+                fontSize: 9.5,
+                fontWeight: 700,
+                color: '#2C2C2C',
+                letterSpacing: '0.35em',
+                textTransform: 'uppercase',
+                marginTop: -2,
+              }}>
+                INDIAN CUISINE
+              </div>
+            </div>
+            {/* Gold scroll under name */}
+            <ScrollDivider />
+          </div>
+
+          {/* Lady illustration */}
+          <div style={{ width:72, flexShrink:0 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/amulya-lady.png"
+              alt=""
+              crossOrigin="anonymous"
+              style={{ width:72, display:'block' }}
+            />
+          </div>
         </div>
 
-        {/* ── top rule ── */}
-        <div style={{ margin:'0 -4px 3px' }}><GoldRule id="top" /></div>
-
-        {/* ── BUFFET BANNER ── */}
+        {/* ── DAY + MEAL TITLE ── */}
         <div style={{
           textAlign:'center',
-          padding:'5px 12px 6px',
-          margin:'0 6px 3px',
-          background:'linear-gradient(90deg,transparent,rgba(160,95,10,0.10),rgba(210,140,20,0.16),rgba(160,95,10,0.10),transparent)',
-          borderTop:'0.8px solid rgba(160,100,20,0.48)',
-          borderBottom:'0.8px solid rgba(160,100,20,0.48)',
+          background:'linear-gradient(90deg,transparent,rgba(139,26,16,0.08),rgba(139,26,16,0.12),rgba(139,26,16,0.08),transparent)',
+          borderTop:'1.5px solid #B8860B',
+          borderBottom:'1.5px solid #B8860B',
+          padding:'4px 8px 5px',
+          margin:'0 -2px 5px',
         }}>
-          <div style={{
-            fontSize:8.5, letterSpacing:'0.42em', textTransform:'uppercase',
-            color:'#7B4A10', fontFamily:'Georgia,serif', marginBottom:1,
-          }}>
-            Today&apos;s Special
+          {/* decorative side elements */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+            <span style={{ color:'#8B6914', fontSize:12 }}>❧</span>
+            <div>
+              <div style={{
+                fontSize: 24,
+                fontWeight: 900,
+                color: '#7A1208',
+                fontFamily: 'Georgia, serif',
+                lineHeight: 1.05,
+                letterSpacing: '0.01em',
+                textShadow: '1px 1px 2px rgba(0,0,0,0.15)',
+                textTransform: 'uppercase',
+              }}>
+                {day} {mealType}
+              </div>
+              <div style={{
+                fontSize: 16,
+                fontWeight: 800,
+                color: '#5C0A00',
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                marginTop: -2,
+              }}>
+                BUFFET
+              </div>
+            </div>
+            <span style={{ color:'#8B6914', fontSize:12 }}>❧</span>
           </div>
-          <div style={{
-            fontSize:26, fontWeight:800, letterSpacing:'0.05em',
-            background:'linear-gradient(135deg,#6B3508 0%,#B8680F 30%,#E8A828 50%,#B8680F 70%,#6B3508 100%)',
-            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text',
-            fontFamily:'Georgia,serif', lineHeight:1.08,
-          }}>
-            {mealType.toUpperCase()} BUFFET
-          </div>
-          <div style={{ fontSize:10, color:'#7B4A10', marginTop:2, fontStyle:'italic', letterSpacing:'0.04em' }}>
-            {day}&nbsp;&nbsp;·&nbsp;&nbsp;{dateStr}
+          <div style={{ fontSize:8.5, color:'#6B4A0A', letterSpacing:'0.15em', marginTop:1 }}>
+            {dateStr}
           </div>
         </div>
 
-        {/* ── VEG ── */}
-        {vegItems.length > 0 && (<>
-          <SectionHead label="🌿  Vegetarian" />
-          <div style={{
-            display:'grid',
-            gridTemplateColumns: useOneCol(vegItems) ? '1fr' : '1fr 1fr',
-            columnGap:10, rowGap:1.5, marginBottom:4,
-          }}>
-            {vegItems.map(item => (
-              <div key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:5 }}>
-                <Dot color="#2E7D32"/>
-                <span style={itemStyle}>{item.name}</span>
+        {/* ── 3-COLUMN MENU GRID ── */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:6, marginBottom:4 }}>
+
+          {/* LEFT: VEG ITEMS */}
+          <div>
+            <SectionBadge label="Veg Items" color="green" />
+            {vegItems.length === 0
+              ? <div style={{fontSize:9,color:'#888',textAlign:'center'}}>None selected</div>
+              : vegItems.map(item => <MenuItem key={item.id} name={item.name} dot="#2E7D32"/>)
+            }
+          </div>
+
+          {/* CENTRE: ACCOMPANIMENTS + DESSERTS */}
+          <div style={{ width:110 }}>
+            <SectionBadge label="Accompaniments / Sides" color="gold" />
+            {accompaniments.map(item => (
+              <div key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:4, marginBottom:2 }}>
+                <span style={{ color:'#8B6914', fontSize:8, lineHeight:1.4, flexShrink:0 }}>●</span>
+                <span style={{ fontSize:9, color:'#1A0A00', fontFamily:'Georgia,serif', lineHeight:1.3 }}>
+                  {item.name}
+                </span>
               </div>
             ))}
-          </div>
-        </>)}
 
-        {/* ── mid rule ── */}
-        {vegItems.length > 0 && nonVegItems.length > 0 && (
-          <div style={{ margin:'2px -4px' }}><GoldRule id="mid" /></div>
-        )}
-
-        {/* ── NON-VEG ── */}
-        {nonVegItems.length > 0 && (<>
-          <SectionHead label="🍗  Non-Vegetarian" />
-          <div style={{
-            display:'grid',
-            gridTemplateColumns: useOneCol(nonVegItems) ? '1fr' : '1fr 1fr',
-            columnGap:10, rowGap:1.5, marginBottom:4,
-          }}>
-            {nonVegItems.map(item => (
-              <div key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:5 }}>
-                <Dot color="#B71C1C"/>
-                <span style={itemStyle}>{item.name}</span>
+            {desserts.length > 0 && (
+              <div style={{ marginTop:6 }}>
+                <SectionBadge label="Desserts" color="maroon" />
+                {desserts.map(item => (
+                  <div key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:4, marginBottom:2 }}>
+                    <span style={{ color:'#DAA520', fontSize:8, flexShrink:0, lineHeight:1.4 }}>◆</span>
+                    <span style={{ fontSize:9, color:'#1A0A00', fontFamily:'Georgia,serif', lineHeight:1.3 }}>
+                      {item.name}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        </>)}
 
-        {/* ── dessert rule ── */}
-        {desserts.length > 0 && (
-          <div style={{ margin:'2px -4px' }}><GoldRule id="des" /></div>
-        )}
-
-        {/* ── DESSERTS ── */}
-        {desserts.length > 0 && (<>
-          <SectionHead label="🍮  Desserts" />
-          <div style={{ textAlign:'center', marginBottom:4 }}>
-            <span style={{ fontSize:10.5, color:'#2D1A06', lineHeight:1.6, fontFamily:'Georgia,serif' }}>
-              {desserts.map(d => d.name).join('  ·  ')}
-            </span>
-          </div>
-        </>)}
-
-        {/* ── ACCOMPANIMENTS ── */}
-        {accompaniments.length > 0 && (<>
-          <div style={{ margin:'2px -4px' }}><GoldRule id="acc" /></div>
-          <SectionHead label="Served With" />
-          <div style={{ textAlign:'center', marginBottom:4 }}>
-            <span style={{ fontSize:10, color:'#5C3510', lineHeight:1.6, fontFamily:'Georgia,serif' }}>
-              {accompaniments.map(a => a.name).join('  ·  ')}
-            </span>
-          </div>
-        </>)}
-
-        {/* ── bottom rule ── */}
-        <div style={{ margin:'3px -4px 4px' }}><GoldRule id="bot" flip /></div>
-
-        {/* ── FOOTER ── */}
-        <div style={{ textAlign:'center' }}>
-          <div style={{
-            fontSize:8.5, letterSpacing:'0.22em', textTransform:'uppercase',
-            color:'#8B5A10', marginBottom:3, fontFamily:'Georgia,serif',
-          }}>
-            Unlimited Servings &nbsp;·&nbsp; All Inclusive
-          </div>
-          <div style={{
-            fontSize:11.5, fontWeight:700, letterSpacing:'0.03em',
-            color:'#7B3B0A', fontFamily:'Georgia,serif',
-          }}>
-            📞 Reserve Your Table Today
-          </div>
-          <div style={{
-            fontSize:9.5, color:'#9B6520', marginTop:2, letterSpacing:'0.12em',
-            fontFamily:'Georgia,serif',
-          }}>
-            www.amulyaindian.com.au
+          {/* RIGHT: NON-VEG ITEMS */}
+          <div>
+            <SectionBadge label="Non-Veg Items" color="maroon" />
+            {nonVegItems.length === 0
+              ? <div style={{fontSize:9,color:'#888',textAlign:'center'}}>None selected</div>
+              : nonVegItems.map(item => <MenuItem key={item.id} name={item.name} dot="#B71C1C"/>)
+            }
           </div>
         </div>
 
-      </div>{/* /content */}
+      </div>{/* /content padding */}
+
+      {/* ── FOOD PHOTO STRIP ── */}
+      <div style={{ position:'relative', overflow:'hidden', height:90 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/food-strip.png"
+          alt=""
+          crossOrigin="anonymous"
+          style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 30%', display:'block' }}
+        />
+        {/* gradient overlay at top for smooth blend */}
+        <div style={{
+          position:'absolute', top:0, left:0, right:0, height:20,
+          background:'linear-gradient(to bottom, #F5E6B8, transparent)',
+        }}/>
+      </div>
+
+      {/* ── BOTTOM BANNER: Fresh · Homemade · Authentic ── */}
+      <div style={{
+        background:'linear-gradient(90deg, #0F2D0F, #1B4D1B, #0F2D0F)',
+        borderTop:'2px solid #DAA520',
+        padding:'6px 14px',
+        display:'flex',
+        alignItems:'center',
+        justifyContent:'center',
+        gap:0,
+      }}>
+        {['FRESH','HOMEMADE','AUTHENTIC'].map((word, i) => (
+          <React.Fragment key={word}>
+            <span style={{
+              fontSize:11,
+              fontWeight:800,
+              color:'#F5DEB3',
+              letterSpacing:'0.2em',
+              textTransform:'uppercase',
+              fontFamily:'Georgia,serif',
+              textShadow:'0 1px 3px rgba(0,0,0,0.5)',
+            }}>
+              {word}
+            </span>
+            {i < 2 && (
+              <span style={{ color:'#DAA520', fontSize:14, margin:'0 10px' }}>●</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+
     </div>
   );
 }

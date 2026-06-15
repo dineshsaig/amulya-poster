@@ -9,10 +9,16 @@ export async function downloadPNG(elementId: string, filename: string): Promise<
     scale: 3,
     useCORS: true,
     allowTaint: true,
-    backgroundColor: null,
+    backgroundColor: '#F5EDD0',
     logging: false,
-    width: element.offsetWidth,
-    height: element.offsetHeight,
+    imageTimeout: 15000,
+    onclone: (clonedDoc) => {
+      // ensure images in clone have crossOrigin set
+      const imgs = clonedDoc.querySelectorAll('img');
+      imgs.forEach((img) => {
+        img.crossOrigin = 'anonymous';
+      });
+    },
   });
 
   const link = document.createElement('a');
@@ -30,15 +36,14 @@ export async function downloadPDF(elementId: string, filename: string): Promise<
     scale: 3,
     useCORS: true,
     allowTaint: true,
-    backgroundColor: null,
+    backgroundColor: '#F5EDD0',
     logging: false,
+    imageTimeout: 15000,
   });
 
   const imgData = canvas.toDataURL('image/png', 1.0);
-
-  // 9:16 portrait (Instagram/WhatsApp Story)
-  const pdfWidth = 108; // mm
-  const pdfHeight = 192; // mm
+  const pdfWidth = 108;
+  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
   const pdf = new jsPDF({
     orientation: 'portrait',

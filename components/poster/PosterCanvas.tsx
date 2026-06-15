@@ -1,175 +1,204 @@
 'use client';
 /**
- * PosterCanvas.tsx — v19 FIXED
+ * PosterCanvas.tsx — v21 FINAL
  *
- * CSS preview that mirrors the EXACT same pixel boxes as posterExport.ts.
- * Positions as % of 1024×1819 so it scales correctly in the mobile preview.
+ * Mirrors posterExport.ts v21 exactly:
+ *   • Uniform font size per column (all items same size)
+ *   • Natural line height capped at fontSize×2.2 (no huge gaps)
+ *   • Items vertically centred as a group within the box
+ *   • Fixed small dot (7px) for maximum text room
  *
- * BOXES (1024×1819 template):
- *   TITLE:    x=30,  y=235, w=964, h=197
- *   VEG:      x=12,  y=555, w=328, h=740
- *   SIDES:    x=342, y=530, w=334, h=435
- *   DESSERTS: x=342, y=1015,w=334, h=278
- *   NONVEG:   x=678, y=555, w=336, h=740
+ * BOX MAP (1024 × 1819):
+ *   TITLE:    x=30,  y=252, w=964, h=175
+ *   VEG:      x=12,  y=560, w=328, h=730
+ *   SIDES:    x=342, y=565, w=334, h=398
+ *   DESSERTS: x=342, y=1100,w=334, h=193
+ *   NONVEG:   x=678, y=560, w=336, h=730
  */
 
-import React from 'react';
+import React, { useMemo, CSSProperties } from 'react';
 import { PosterConfig } from '@/types';
 
-interface PosterCanvasProps {
-  config: PosterConfig;
-  fontFamily?: string;
+const TW = 1024;
+const TH = 1819;
+
+const px   = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
+const vw   = (v: number)                => `${((v / TW) * 100).toFixed(3)}vw`;
+
+// Fixed dot radius matching posterExport.ts (DOT_R = 7)
+const DOT_R = 7;
+
+interface Box { x: number; y: number; w: number; h: number }
+
+/**
+ * Estimate uniform font size for a column using the same logic as posterExport.ts.
+ * Approximates Book Antiqua glyph width as fontSize × 0.60.
+ */
+function calcUniformFont(
+  items: { name: string }[],
+  box: Box,
+  minFont: number,
+  maxFont: number,
+): number {
+  if (items.length === 0) return maxFont;
+
+  const textX   = box.x + 5 + DOT_R + DOT_R + 9;
+  const maxTextW = box.w - (textX - box.x) - 6;
+  const longest  = Math.max(...items.map(it => it.name.length));
+
+  let fs = maxFont;
+  while (fs > minFont && longest * fs * 0.60 > maxTextW) fs -= 1;
+  return fs;
 }
 
-const W = 1024;
-const H = 1819;
-const p = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
-
-function BulletList({
-  items, dotColor, lineH, fontSize,
-}: {
+interface ColumnProps {
   items: { name: string; id: string }[];
+  box: Box;
   dotColor: string;
-  lineH: number;      // px per line (relative to W/H scale)
-  fontSize: number;   // px font size (relative to W/H scale)
-}) {
+  minFont: number;
+  maxFont: number;
+}
+
+function Column({ items, box, dotColor, minFont, maxFont }: ColumnProps) {
+  const fontPx = useMemo(
+    () => calcUniformFont(items, box, minFont, maxFont),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items.map(i => i.name).join(','), box.w, box.h, minFont, maxFont],
+  );
+
   if (items.length === 0) return null;
+
+  const n        = items.length;
+  const maxLineH = fontPx * 2.2;
+  const lineH    = Math.min(box.h / n, maxLineH);
+  const groupH   = lineH * n;
+  const startY   = box.y + (box.h - groupH) / 2;
+
+  const lineHPct = (lineH / TH) * 100;
+  const fontVw   = vw(fontPx);
+  const dotVw    = vw(DOT_R);
+
+  // dot cx from left edge of box
+  const dotCXpx   = box.x + 5 + DOT_R;
+  const textXpx   = dotCXpx + DOT_R + 9;
+
   return (
-    <>
-      {items.map((item, i) => (
-        <div
-          key={item.id}
-          style={{
-            position: 'absolute',
-            top: `${((i * lineH) / H * 100).toFixed(3)}%`,
-            left: 0, right: 0,
-            height: `${(lineH / H * 100).toFixed(3)}%`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: `${(fontSize * 0.28 / W * 100).toFixed(3)}%`,
-            overflow: 'hidden',
-          }}
-        >
-          <span style={{
-            display:      'inline-block',
-            width:        `${(fontSize * 0.40 / W * 100).toFixed(3)}%`,
-            aspectRatio:  '1',
-            borderRadius: '50%',
-            background:   dotColor,
-            flexShrink:   0,
-          }} />
-          <span style={{
-            fontSize:     `${(fontSize / W * 100).toFixed(3)}vw`,
-            fontFamily:   '"Book Antiqua","Palatino Linotype",Georgia,serif',
-            color:        '#1A0800',
-            lineHeight:   1,
-            whiteSpace:   'nowrap',
-            overflow:     'hidden',
-          }}>
-            {item.name}
-          </span>
-        </div>
-      ))}
-    </>
+    <div style={{
+      position: 'absolute',
+      left:     px(box.x, TW),
+      top:      px(startY, TH),
+      width:    px(box.w, TW),
+      height:   px(groupH, TH),
+      overflow: 'hidden',
+    }}>
+      {items.map((item, i) => {
+        const rowStyle: CSSProperties = {
+          position:   'absolute',
+          top:        `${(i * lineHPct).toFixed(3)}%`,
+          left:       0,
+          right:      0,
+          height:     `${lineHPct.toFixed(3)}%`,
+          display:    'flex',
+          alignItems: 'center',
+          overflow:   'hidden',
+        };
+        const dotStyle: CSSProperties = {
+          position:     'absolute',
+          left:         px(dotCXpx - box.x - DOT_R, box.w),
+          width:        `calc(${dotVw} * 2)`,
+          aspectRatio:  '1',
+          borderRadius: '50%',
+          background:   dotColor,
+          flexShrink:   0,
+        };
+        const textStyle: CSSProperties = {
+          position:   'absolute',
+          left:       px(textXpx - box.x, box.w),
+          right:      '1%',
+          fontSize:   fontVw,
+          fontFamily: '"Book Antiqua","Palatino Linotype",Georgia,serif',
+          color:      '#1A0800',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+          overflow:   'hidden',
+        };
+        return (
+          <div key={item.id} style={rowStyle}>
+            <span style={dotStyle} />
+            <span style={textStyle}>{item.name}</span>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 export default function PosterCanvas({
   config,
   fontFamily = '"Book Antiqua","Palatino Linotype",Palatino,Georgia,serif',
-}: PosterCanvasProps) {
+}: {
+  config: PosterConfig;
+  fontFamily?: string;
+}) {
   const { day, mealType, vegItems, nonVegItems, desserts, accompaniments } = config;
 
-  const title = `${day} ${mealType} Buffet`;
-  const titleFS = title.length > 22 ? 60 : title.length > 18 ? 68 : 76;
+  const title   = `${day} ${mealType} Buffet`;
+  const titleFS = title.length > 22 ? 58 : title.length > 18 ? 66 : 74;
 
-  // Calculate line heights and font sizes matching posterExport.ts logic
-  const calcFS = (n: number, boxH: number, min: number, max: number) =>
-    n === 0 ? max : Math.max(min, Math.min(max, Math.floor((boxH / n) * 0.52)));
-
-  const vegLH   = vegItems.length   > 0 ? 740 / vegItems.length   : 740;
-  const nvLH    = nonVegItems.length > 0 ? 740 / nonVegItems.length : 740;
-  const sidesLH = accompaniments.length > 0 ? 435 / accompaniments.length : 435;
-  const desLH   = desserts.length   > 0 ? 278 / desserts.length   : 278;
-
-  const vegFS   = calcFS(vegItems.length,       740, 22, 54);
-  const nvFS    = calcFS(nonVegItems.length,     740, 22, 54);
-  const sidesFS = calcFS(accompaniments.length,  435, 18, 34);
-  const desFS   = calcFS(desserts.length,        278, 18, 40);
+  const BOXES: Record<string, Box> = {
+    title:    { x: 30,  y: 252,  w: 964, h: 175 },
+    veg:      { x: 12,  y: 560,  w: 328, h: 730 },
+    sides:    { x: 342, y: 565,  w: 334, h: 398 },
+    desserts: { x: 342, y: 1100, w: 334, h: 193 },
+    nonveg:   { x: 678, y: 560,  w: 336, h: 730 },
+  };
 
   return (
     <div style={{
-      position: 'relative',
-      width: '100%',
-      aspectRatio: `${W} / ${H}`,
-      overflow: 'hidden',
+      position:    'relative',
+      width:       '100%',
+      aspectRatio: `${TW} / ${TH}`,
+      overflow:    'hidden',
       fontFamily,
     }}>
-      {/* Template background */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/poster-template.png"
-        alt="Amulya poster template"
+        alt="Amulya poster"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
         draggable={false}
       />
 
-      {/* TITLE  x=30,y=235,w=964,h=197 */}
+      {/* TITLE */}
       <div style={{
-        position: 'absolute',
-        left: p(30, W), top: p(235, H), width: p(964, W), height: p(197, H),
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position:       'absolute',
+        left:           px(BOXES.title.x, TW),
+        top:            px(BOXES.title.y, TH),
+        width:          px(BOXES.title.w, TW),
+        height:         px(BOXES.title.h, TH),
+        display:        'flex',
+        alignItems:     'center',
+        justifyContent: 'center',
       }}>
         <span style={{
-          fontSize:   `${(titleFS / W * 100).toFixed(3)}vw`,
+          fontSize:   vw(titleFS),
           fontWeight: 'bold',
           color:      '#7A0000',
           fontFamily,
           lineHeight: 1.05,
           textAlign:  'center',
-          wordBreak:  'break-word',
+          whiteSpace: 'nowrap',
         }}>
           {title}
         </span>
       </div>
 
-      {/* VEG  x=12,y=555,w=328,h=740 */}
-      <div style={{
-        position: 'absolute',
-        left: p(12, W), top: p(555, H), width: p(328, W), height: p(740, H),
-        overflow: 'hidden',
-      }}>
-        <BulletList items={vegItems} dotColor="#1A6E1A" lineH={vegLH} fontSize={vegFS} />
-      </div>
-
-      {/* SIDES  x=342,y=530,w=334,h=435 */}
-      <div style={{
-        position: 'absolute',
-        left: p(342, W), top: p(530, H), width: p(334, W), height: p(435, H),
-        overflow: 'hidden',
-      }}>
-        <BulletList items={accompaniments} dotColor="#5C5C2E" lineH={sidesLH} fontSize={sidesFS} />
-      </div>
-
-      {/* DESSERTS  x=342,y=1015,w=334,h=278 */}
+      <Column items={vegItems}       box={BOXES.veg}      dotColor="#1A6E1A" minFont={18} maxFont={52} />
+      <Column items={accompaniments} box={BOXES.sides}    dotColor="#5C5C2E" minFont={16} maxFont={32} />
       {desserts.length > 0 && (
-        <div style={{
-          position: 'absolute',
-          left: p(342, W), top: p(1015, H), width: p(334, W), height: p(278, H),
-          overflow: 'hidden',
-        }}>
-          <BulletList items={desserts} dotColor="#A05000" lineH={desLH} fontSize={desFS} />
-        </div>
+        <Column items={desserts}     box={BOXES.desserts} dotColor="#A05000" minFont={16} maxFont={36} />
       )}
-
-      {/* NONVEG  x=678,y=555,w=336,h=740 */}
-      <div style={{
-        position: 'absolute',
-        left: p(678, W), top: p(555, H), width: p(336, W), height: p(740, H),
-        overflow: 'hidden',
-      }}>
-        <BulletList items={nonVegItems} dotColor="#8B0000" lineH={nvLH} fontSize={nvFS} />
-      </div>
+      <Column items={nonVegItems}    box={BOXES.nonveg}   dotColor="#8B0000" minFont={18} maxFont={52} />
     </div>
   );
 }

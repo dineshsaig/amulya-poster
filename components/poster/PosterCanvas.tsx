@@ -14,31 +14,52 @@ export default function PosterCanvas({
   const { day, mealType, vegItems, nonVegItems, desserts, accompaniments } = config;
 
   /*
-   * Template: 1024×1536px from new reference design
-   * Cleared areas for overlay:
-   *   TITLE:    left=15,  top=240, w=994,  h=170
-   *   VEG:      left=15,  top=495, w=320,  h=645
-   *   SIDES:    left=338, top=495, w=326,  h=500
-   *   DESSERTS: left=338, top=998, w=326,  h=140
-   *   NONVEG:   left=663, top=495, w=346,  h=645
+   * Template: 1024×1536px
+   * Content area: y=492 to y=1161  (total height = 669px)
+   * Columns:
+   *   VEG:    x=40,  w=262
+   *   SIDES:  x=338, w=313
+   *   NONVEG: x=662, w=322
+   *
+   * Layout strategy:
+   * - VEG & NONVEG get the full 669px height
+   * - SIDES gets the top portion, DESSERTS gets the bottom
+   * - We render a "Desserts" sub-header in code at the split point
    */
 
-  const VEG_H     = 645;
-  const NONVEG_H  = 645;
-  const SIDES_H   = 500;
-  const DESSERT_H = 140;
+  const CONTENT_TOP  = 492;
+  const CONTENT_BOT  = 1158;
+  const CONTENT_H    = CONTENT_BOT - CONTENT_TOP; // 666px
 
-  const calcSizes = (count: number, boxH: number, minFont = 18, maxFont = 34) => {
+  // Desserts header height (rendered in code)
+  const DESSERT_HDR_H = 60;
+
+  // Calculate sides height vs desserts height
+  const sidesCount   = accompaniments.length;
+  const dessertCount = desserts.length;
+
+  // Sides gets proportional space, desserts gets the rest
+  const totalCentreSections = sidesCount + dessertCount;
+  const sidesH = dessertCount > 0
+    ? Math.min(CONTENT_H - DESSERT_HDR_H - dessertCount * 55, Math.floor(CONTENT_H * 0.65))
+    : CONTENT_H;
+  const dessertH = dessertCount > 0
+    ? CONTENT_H - sidesH - DESSERT_HDR_H
+    : 0;
+  const dessertTop = CONTENT_TOP + sidesH + DESSERT_HDR_H;
+
+  // Auto-scale font sizes
+  const calcSizes = (count: number, boxH: number, minFont = 18, maxFont = 36) => {
     if (count === 0) return { fontSize: maxFont, lineH: maxFont * 1.55 };
     const lineH = Math.min(maxFont * 1.55, boxH / count);
     const fontSize = Math.max(minFont, Math.min(maxFont, lineH / 1.55));
     return { fontSize, lineH };
   };
 
-  const vegS     = calcSizes(vegItems.length,       VEG_H);
-  const nonvegS  = calcSizes(nonVegItems.length,    NONVEG_H);
-  const sidesS   = calcSizes(accompaniments.length, SIDES_H, 16, 28);
-  const dessertS = calcSizes(desserts.length,       DESSERT_H, 16, 26);
+  const vegS     = calcSizes(vegItems.length,    CONTENT_H);
+  const nonvegS  = calcSizes(nonVegItems.length, CONTENT_H);
+  const sidesS   = calcSizes(sidesCount,         sidesH, 16, 30);
+  const dessertS = calcSizes(dessertCount,        dessertH, 16, 28);
 
   const renderItems = (
     items: { id: string; name: string }[],
@@ -47,7 +68,8 @@ export default function PosterCanvas({
     boxWidth: number,
   ) => items.map((item) => (
     <div key={item.id} style={{
-      display: 'flex', alignItems: 'center',
+      display: 'flex',
+      alignItems: 'center',
       height: sizes.lineH,
       fontSize: sizes.fontSize,
       lineHeight: 1,
@@ -58,19 +80,19 @@ export default function PosterCanvas({
       overflow: 'hidden',
     }}>
       <span style={{
-        width: Math.max(10, sizes.fontSize * 0.45),
-        height: Math.max(10, sizes.fontSize * 0.45),
+        width: Math.max(10, sizes.fontSize * 0.42),
+        height: Math.max(10, sizes.fontSize * 0.42),
         borderRadius: '50%',
         background: dotColor,
         flexShrink: 0,
         display: 'inline-block',
-        marginRight: Math.max(8, sizes.fontSize * 0.35),
+        marginRight: Math.max(10, sizes.fontSize * 0.32),
       }}/>
       <span style={{
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
-        maxWidth: boxWidth - sizes.fontSize,
+        maxWidth: boxWidth - sizes.fontSize - 10,
       }}>
         {item.name}
       </span>
@@ -89,27 +111,25 @@ export default function PosterCanvas({
         style={{ width: '100%', display: 'block' }}
       />
 
-      {/* ── DYNAMIC TITLE OVERLAY ── */}
+      {/* ── DYNAMIC TITLE ── */}
       <div style={{
         position: 'absolute',
-        left: 15, top: 240,
-        width: 994, height: 170,
+        left: 15, top: 235,
+        width: 994, height: 175,
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10,
         textAlign: 'center',
       }}>
         <div style={{
-          fontSize: 80,
+          fontSize: 76,
           fontWeight: 900,
           color: '#3B0A0A',
-          fontFamily: '"Book Antiqua", "Palatino Linotype", Georgia, serif',
-          lineHeight: 1.05,
-          letterSpacing: '0.02em',
-          textTransform: 'capitalize',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.15)',
+          fontFamily,
+          lineHeight: 1.08,
+          letterSpacing: '0.01em',
+          textShadow: '1px 1px 3px rgba(0,0,0,0.12)',
         }}>
           {day} {mealType} Buffet
         </div>
@@ -117,40 +137,83 @@ export default function PosterCanvas({
 
       {/* ── VEG ITEMS ── */}
       <div style={{
-        position: 'absolute', left: 15, top: 495,
-        width: 320, height: VEG_H,
-        overflow: 'hidden', zIndex: 10, paddingLeft: 10,
+        position: 'absolute',
+        left: 40, top: CONTENT_TOP,
+        width: 262, height: CONTENT_H,
+        overflow: 'hidden', zIndex: 10,
+        paddingLeft: 4,
       }}>
-        {renderItems(vegItems, '#2E7D32', vegS, 310)}
+        {renderItems(vegItems, '#2E7D32', vegS, 256)}
       </div>
 
       {/* ── SIDES ── */}
       <div style={{
-        position: 'absolute', left: 338, top: 495,
-        width: 326, height: SIDES_H,
-        overflow: 'hidden', zIndex: 10, paddingLeft: 8,
+        position: 'absolute',
+        left: 338, top: CONTENT_TOP,
+        width: 313, height: sidesH,
+        overflow: 'hidden', zIndex: 10,
+        paddingLeft: 4,
       }}>
-        {renderItems(accompaniments, '#8B6914', sidesS, 318)}
+        {renderItems(accompaniments, '#8B6914', sidesS, 307)}
       </div>
 
-      {/* ── DESSERTS ── */}
+      {/* ── DESSERTS HEADER (rendered in code) ── */}
       {desserts.length > 0 && (
         <div style={{
-          position: 'absolute', left: 338, top: 998,
-          width: 326, height: DESSERT_H,
-          overflow: 'hidden', zIndex: 10, paddingLeft: 8,
+          position: 'absolute',
+          left: 338,
+          top: CONTENT_TOP + sidesH,
+          width: 313,
+          height: DESSERT_HDR_H,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
         }}>
-          {renderItems(desserts, '#DAA520', dessertS, 318)}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            width: '90%',
+          }}>
+            <div style={{ flex: 1, height: 2, background: 'linear-gradient(to right, transparent, #B8860B)' }}/>
+            <span style={{
+              fontSize: 28, fontWeight: 800,
+              color: '#3B0A0A',
+              fontFamily,
+              letterSpacing: '0.08em',
+              textTransform: 'capitalize',
+              whiteSpace: 'nowrap',
+            }}>
+              ✦ Desserts ✦
+            </span>
+            <div style={{ flex: 1, height: 2, background: 'linear-gradient(to left, transparent, #B8860B)' }}/>
+          </div>
+        </div>
+      )}
+
+      {/* ── DESSERTS ITEMS ── */}
+      {desserts.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          left: 338,
+          top: dessertTop,
+          width: 313,
+          height: dessertH,
+          overflow: 'hidden', zIndex: 10,
+          paddingLeft: 4,
+        }}>
+          {renderItems(desserts, '#DAA520', dessertS, 307)}
         </div>
       )}
 
       {/* ── NON-VEG ITEMS ── */}
       <div style={{
-        position: 'absolute', left: 663, top: 495,
-        width: 346, height: NONVEG_H,
-        overflow: 'hidden', zIndex: 10, paddingLeft: 10,
+        position: 'absolute',
+        left: 662, top: CONTENT_TOP,
+        width: 322, height: CONTENT_H,
+        overflow: 'hidden', zIndex: 10,
+        paddingLeft: 4,
       }}>
-        {renderItems(nonVegItems, '#B71C1C', nonvegS, 336)}
+        {renderItems(nonVegItems, '#B71C1C', nonvegS, 316)}
       </div>
 
     </div>

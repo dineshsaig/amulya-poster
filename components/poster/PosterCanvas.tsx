@@ -10,14 +10,15 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
   const { day, mealType, vegItems, nonVegItems, desserts, accompaniments } = config;
 
   /* ── Calculate dynamic font sizes based on item count ── */
-  const VEG_BOX_HEIGHT = 310;
-  const NONVEG_BOX_HEIGHT = 310;
-  const SIDES_BOX_HEIGHT = 180;
-  const DESSERT_BOX_HEIGHT = 100;
+  /* Actual available box heights in the template */
+  const VEG_BOX_HEIGHT = 230;      /* was 310, actually 230 */
+  const NONVEG_BOX_HEIGHT = 230;
+  const SIDES_BOX_HEIGHT = 140;
+  const DESSERT_BOX_HEIGHT = 70;
 
-  const calcFontSize = (itemCount: number, boxHeight: number, minSize = 7.5, maxSize = 10.5) => {
+  const calcFontSize = (itemCount: number, boxHeight: number, minSize = 7, maxSize = 9.5) => {
     if (itemCount === 0) return maxSize;
-    const neededHeight = itemCount * 19;
+    const neededHeight = itemCount * 18;
     if (neededHeight <= boxHeight) return maxSize;
     const scaleFactor = boxHeight / neededHeight;
     const size = Math.max(minSize, maxSize * scaleFactor);
@@ -27,9 +28,9 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
   const vegFontSize = calcFontSize(vegItems.length, VEG_BOX_HEIGHT);
   const nonvegFontSize = calcFontSize(nonVegItems.length, NONVEG_BOX_HEIGHT);
   const sidesFontSize = calcFontSize(accompaniments.length, SIDES_BOX_HEIGHT);
-  const dessertFontSize = calcFontSize(desserts.length, DESSERT_BOX_HEIGHT, 7, 9.5);
+  const dessertFontSize = calcFontSize(desserts.length, DESSERT_BOX_HEIGHT, 6.5, 8.5);
 
-  const itemLineHeight = 19;
+  const itemLineHeight = 18;
 
   return (
     <div
@@ -58,18 +59,19 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
       {/* ── DYNAMIC TEXT OVERLAYS ── */}
 
       {/* LEFT COLUMN — VEG ITEMS */}
+      {/* Veg box: starts at top ~220px, height ~230px */}
       <div
         style={{
           position: 'absolute',
-          left: 33,
-          top: 305,
-          width: 128,
+          left: 35,
+          top: 223,
+          width: 125,
           height: VEG_BOX_HEIGHT,
           overflow: 'hidden',
           zIndex: 10,
         }}
       >
-        {vegItems.map((item, idx) => (
+        {vegItems.map((item) => (
           <div
             key={item.id}
             style={{
@@ -103,12 +105,13 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
       </div>
 
       {/* CENTRE COLUMN TOP — SIDES/ACCOMPANIMENTS */}
+      {/* Sides box: starts at top ~223px, height ~140px */}
       <div
         style={{
           position: 'absolute',
-          left: 172,
-          top: 305,
-          width: 76,
+          left: 173,
+          top: 223,
+          width: 74,
           height: SIDES_BOX_HEIGHT,
           overflow: 'hidden',
           zIndex: 10,
@@ -120,7 +123,7 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
             style={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 4,
+              gap: 3,
               marginBottom: 0,
               height: itemLineHeight,
               fontSize: sidesFontSize,
@@ -140,7 +143,7 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
                 marginTop: 7,
               }}
             />
-            <span style={{ wordBreak: 'break-word', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ wordBreak: 'break-word', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: sidesFontSize }}>
               {item.name}
             </span>
           </div>
@@ -148,13 +151,14 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
       </div>
 
       {/* CENTRE COLUMN BOTTOM — DESSERTS */}
+      {/* Desserts box: starts at top ~375px, height ~70px */}
       {desserts.length > 0 && (
         <div
           style={{
             position: 'absolute',
-            left: 172,
-            top: 535,
-            width: 76,
+            left: 173,
+            top: 375,
+            width: 74,
             height: DESSERT_BOX_HEIGHT,
             overflow: 'hidden',
             zIndex: 10,
@@ -166,7 +170,7 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: 4,
+                gap: 3,
                 marginBottom: 0,
                 height: itemLineHeight,
                 fontSize: dessertFontSize,
@@ -195,12 +199,13 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
       )}
 
       {/* RIGHT COLUMN — NON-VEG ITEMS */}
+      {/* Non-Veg box: starts at top ~223px, height ~230px */}
       <div
         style={{
           position: 'absolute',
-          left: 281,
-          top: 305,
-          width: 128,
+          left: 260,
+          top: 223,
+          width: 125,
           height: NONVEG_BOX_HEIGHT,
           overflow: 'hidden',
           zIndex: 10,

@@ -1,4 +1,18 @@
 'use client';
+/**
+ * PosterCanvas.tsx — v19 FIXED
+ *
+ * CSS preview that mirrors the EXACT same pixel boxes as posterExport.ts.
+ * Positions as % of 1024×1819 so it scales correctly in the mobile preview.
+ *
+ * BOXES (1024×1819 template):
+ *   TITLE:    x=30,  y=235, w=964, h=197
+ *   VEG:      x=12,  y=555, w=328, h=740
+ *   SIDES:    x=342, y=530, w=334, h=435
+ *   DESSERTS: x=342, y=1015,w=334, h=278
+ *   NONVEG:   x=678, y=555, w=336, h=740
+ */
+
 import React from 'react';
 import { PosterConfig } from '@/types';
 
@@ -7,86 +21,154 @@ interface PosterCanvasProps {
   fontFamily?: string;
 }
 
+const W = 1024;
+const H = 1819;
+const p = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
+
+function BulletList({
+  items, dotColor, lineH, fontSize,
+}: {
+  items: { name: string; id: string }[];
+  dotColor: string;
+  lineH: number;      // px per line (relative to W/H scale)
+  fontSize: number;   // px font size (relative to W/H scale)
+}) {
+  if (items.length === 0) return null;
+  return (
+    <>
+      {items.map((item, i) => (
+        <div
+          key={item.id}
+          style={{
+            position: 'absolute',
+            top: `${((i * lineH) / H * 100).toFixed(3)}%`,
+            left: 0, right: 0,
+            height: `${(lineH / H * 100).toFixed(3)}%`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: `${(fontSize * 0.28 / W * 100).toFixed(3)}%`,
+            overflow: 'hidden',
+          }}
+        >
+          <span style={{
+            display:      'inline-block',
+            width:        `${(fontSize * 0.40 / W * 100).toFixed(3)}%`,
+            aspectRatio:  '1',
+            borderRadius: '50%',
+            background:   dotColor,
+            flexShrink:   0,
+          }} />
+          <span style={{
+            fontSize:     `${(fontSize / W * 100).toFixed(3)}vw`,
+            fontFamily:   '"Book Antiqua","Palatino Linotype",Georgia,serif',
+            color:        '#1A0800',
+            lineHeight:   1,
+            whiteSpace:   'nowrap',
+            overflow:     'hidden',
+          }}>
+            {item.name}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function PosterCanvas({
   config,
-  fontFamily = '"Book Antiqua", "Palatino Linotype", Palatino, Georgia, serif',
+  fontFamily = '"Book Antiqua","Palatino Linotype",Palatino,Georgia,serif',
 }: PosterCanvasProps) {
   const { day, mealType, vegItems, nonVegItems, desserts, accompaniments } = config;
 
-  const sidesH   = desserts.length > 0 ? (1155 - 555 - 10) : 600;
+  const title = `${day} ${mealType} Buffet`;
+  const titleFS = title.length > 22 ? 60 : title.length > 18 ? 68 : 76;
 
-  const calcSizes = (count: number, boxH: number, min = 20, max = 38) => {
-    if (count === 0) return { fontSize: max, lineH: max * 1.55 };
-    const lineH = Math.min(max * 1.55, boxH / count);
-    return { fontSize: Math.max(min, Math.min(max, lineH / 1.55)), lineH };
-  };
+  // Calculate line heights and font sizes matching posterExport.ts logic
+  const calcFS = (n: number, boxH: number, min: number, max: number) =>
+    n === 0 ? max : Math.max(min, Math.min(max, Math.floor((boxH / n) * 0.52)));
 
-  const vegS     = calcSizes(vegItems.length,       800);
-  const nonvegS  = calcSizes(nonVegItems.length,    800);
-  const sidesS   = calcSizes(accompaniments.length, sidesH, 18, 30);
-  const dessertS = calcSizes(desserts.length,       200, 18, 30);
+  const vegLH   = vegItems.length   > 0 ? 740 / vegItems.length   : 740;
+  const nvLH    = nonVegItems.length > 0 ? 740 / nonVegItems.length : 740;
+  const sidesLH = accompaniments.length > 0 ? 435 / accompaniments.length : 435;
+  const desLH   = desserts.length   > 0 ? 278 / desserts.length   : 278;
 
-  const Item = ({ name, dot, sizes, maxW }: {
-    name: string; dot: string;
-    sizes: { fontSize: number; lineH: number }; maxW: number;
-  }) => (
-    <div style={{
-      display: 'flex', alignItems: 'center',
-      height: sizes.lineH, overflow: 'hidden',
-      fontSize: sizes.fontSize, color: '#1A0800',
-      fontFamily, fontWeight: 400,
-    }}>
-      <span style={{
-        width: Math.max(9, sizes.fontSize * 0.46),
-        height: Math.max(9, sizes.fontSize * 0.46),
-        borderRadius: '50%', background: dot,
-        flexShrink: 0, display: 'inline-block',
-        marginRight: Math.max(8, sizes.fontSize * 0.32),
-      }}/>
-      <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth: maxW }}>
-        {name}
-      </span>
-    </div>
-  );
-
-  const titleText = `${day} ${mealType} Buffet`;
-  const titleSize = titleText.length > 22 ? 56 : titleText.length > 18 ? 64 : 72;
+  const vegFS   = calcFS(vegItems.length,       740, 22, 54);
+  const nvFS    = calcFS(nonVegItems.length,     740, 22, 54);
+  const sidesFS = calcFS(accompaniments.length,  435, 18, 34);
+  const desFS   = calcFS(desserts.length,        278, 18, 40);
 
   return (
-    <div style={{ position: 'relative', width: 1024, overflow: 'hidden', fontFamily }}>
+    <div style={{
+      position: 'relative',
+      width: '100%',
+      aspectRatio: `${W} / ${H}`,
+      overflow: 'hidden',
+      fontFamily,
+    }}>
+      {/* Template background */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/poster-template.png" alt="" crossOrigin="anonymous" style={{ width: '100%', display: 'block' }}/>
+      <img
+        src="/poster-template.png"
+        alt="Amulya poster template"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
+        draggable={false}
+      />
 
-      {/* TITLE */}
+      {/* TITLE  x=30,y=235,w=964,h=197 */}
       <div style={{
-        position: 'absolute', left: 120, top: 220, width: 770, height: 160,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+        position: 'absolute',
+        left: p(30, W), top: p(235, H), width: p(964, W), height: p(197, H),
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <div style={{ fontSize: titleSize, fontWeight: 900, color: '#5C0A00', fontFamily, lineHeight: 1.05, textAlign: 'center' }}>
-          {titleText}
-        </div>
+        <span style={{
+          fontSize:   `${(titleFS / W * 100).toFixed(3)}vw`,
+          fontWeight: 'bold',
+          color:      '#7A0000',
+          fontFamily,
+          lineHeight: 1.05,
+          textAlign:  'center',
+          wordBreak:  'break-word',
+        }}>
+          {title}
+        </span>
       </div>
 
-      {/* VEG */}
-      <div style={{ position:'absolute', left:35, top:555, width:283, height:800, overflow:'hidden', zIndex:10 }}>
-        {vegItems.map(i => <Item key={i.id} name={i.name} dot="#2E7D32" sizes={vegS} maxW={248}/>)}
+      {/* VEG  x=12,y=555,w=328,h=740 */}
+      <div style={{
+        position: 'absolute',
+        left: p(12, W), top: p(555, H), width: p(328, W), height: p(740, H),
+        overflow: 'hidden',
+      }}>
+        <BulletList items={vegItems} dotColor="#1A6E1A" lineH={vegLH} fontSize={vegFS} />
       </div>
 
-      {/* SIDES */}
-      <div style={{ position:'absolute', left:354, top:555, width:301, height:sidesH, overflow:'hidden', zIndex:10 }}>
-        {accompaniments.map(i => <Item key={i.id} name={i.name} dot="#8B6914" sizes={sidesS} maxW={266}/>)}
+      {/* SIDES  x=342,y=530,w=334,h=435 */}
+      <div style={{
+        position: 'absolute',
+        left: p(342, W), top: p(530, H), width: p(334, W), height: p(435, H),
+        overflow: 'hidden',
+      }}>
+        <BulletList items={accompaniments} dotColor="#5C5C2E" lineH={sidesLH} fontSize={sidesFS} />
       </div>
 
-      {/* DESSERTS */}
+      {/* DESSERTS  x=342,y=1015,w=334,h=278 */}
       {desserts.length > 0 && (
-        <div style={{ position:'absolute', left:354, top:1155, width:301, height:200, overflow:'hidden', zIndex:10 }}>
-          {desserts.map(i => <Item key={i.id} name={i.name} dot="#8B4513" sizes={dessertS} maxW={266}/>)}
+        <div style={{
+          position: 'absolute',
+          left: p(342, W), top: p(1015, H), width: p(334, W), height: p(278, H),
+          overflow: 'hidden',
+        }}>
+          <BulletList items={desserts} dotColor="#A05000" lineH={desLH} fontSize={desFS} />
         </div>
       )}
 
-      {/* NON-VEG */}
-      <div style={{ position:'absolute', left:690, top:555, width:299, height:800, overflow:'hidden', zIndex:10 }}>
-        {nonVegItems.map(i => <Item key={i.id} name={i.name} dot="#B71C1C" sizes={nonvegS} maxW={264}/>)}
+      {/* NONVEG  x=678,y=555,w=336,h=740 */}
+      <div style={{
+        position: 'absolute',
+        left: p(678, W), top: p(555, H), width: p(336, W), height: p(740, H),
+        overflow: 'hidden',
+      }}>
+        <BulletList items={nonVegItems} dotColor="#8B0000" lineH={nvLH} fontSize={nvFS} />
       </div>
     </div>
   );

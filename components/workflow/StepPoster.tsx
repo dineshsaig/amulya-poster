@@ -31,8 +31,9 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
     setShowSettings(false);
     setDownloading(type);
     try {
-      if (type === 'png') await downloadPNG('amulya-poster', filename);
-      else await downloadPDF('amulya-poster', filename);
+      // Always use the hidden full-size element for export
+      if (type === 'png') await downloadPNG('amulya-poster-export', filename);
+      else await downloadPDF('amulya-poster-export', filename);
     } catch (err) {
       console.error('Download failed:', err);
       alert('Download failed. Please try again.');
@@ -41,10 +42,15 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
     }
   }
 
+  // Preview: scale 1024px down to ~300px wide = 0.29x
+  // Preview container height: 1536 * 0.29 ≈ 445px
+  const PREVIEW_SCALE = 0.29;
+  const PREVIEW_HEIGHT = Math.round(1536 * PREVIEW_SCALE);
+
   return (
     <div className="space-y-4">
 
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-amber-100" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
@@ -88,7 +94,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
               >
                 <div className="flex justify-between items-center">
                   <span style={{ fontFamily: font.value }}>{font.label}</span>
-                  {selectedFont === font.id && <span className="text-amber-400 text-xs">✓</span>}
+                  {selectedFont === font.id && <span className="text-amber-400 text-xs">✓ Active</span>}
                 </div>
                 <div className="text-[10px] opacity-50 mt-0.5" style={{ fontFamily: font.value }}>
                   Tomato Dal · Gulab Jamun · Apollo Fish
@@ -99,50 +105,45 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         </div>
       )}
 
-      {/* ── SCALED PREVIEW (display only) ── */}
-      <div className="flex justify-center overflow-hidden" style={{ height: 470 }}>
-        <div style={{ transform: 'scale(0.3)', transformOrigin: 'top center' }}>
+      {/* ── SCALED PREVIEW (display only, NOT exported) ── */}
+      <div
+        className="flex justify-center overflow-hidden rounded-lg"
+        style={{ height: PREVIEW_HEIGHT }}
+      >
+        <div style={{
+          transform: `scale(${PREVIEW_SCALE})`,
+          transformOrigin: 'top center',
+          width: 1024,
+          flexShrink: 0,
+        }}>
+          {/* Preview version — not used for export */}
           <PosterCanvas config={config} fontFamily={currentFont} />
         </div>
       </div>
 
-      {/* ── HIDDEN FULL-SIZE EXPORT ELEMENT ── */}
-      {/* This is what html2canvas actually captures — full 420px, no scaling */}
-      <div
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: 0,
-          width: 420,
-          zIndex: -1,
-          pointerEvents: 'none',
-        }}
-      >
-        <div id="amulya-poster">
+      {/* ── HIDDEN FULL-SIZE ELEMENT — this is what gets exported ── */}
+      <div style={{
+        position: 'fixed', left: '-9999px', top: '0px',
+        width: '1024px', zIndex: -1, pointerEvents: 'none',
+        visibility: 'hidden',
+      }}>
+        <div id="amulya-poster-export">
           <PosterCanvas config={config} fontFamily={currentFont} />
         </div>
       </div>
 
       {/* Download buttons */}
       <div className="space-y-2.5">
-        <Button
-          variant="primary" size="lg"
-          className="w-full text-base font-bold tracking-wide"
-          loading={downloading === 'png'}
-          onClick={() => handleDownload('png')}
-        >
+        <Button variant="primary" size="lg" className="w-full text-base font-bold tracking-wide"
+          loading={downloading === 'png'} onClick={() => handleDownload('png')}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
           Download PNG
         </Button>
-        <Button
-          variant="secondary" size="lg"
-          className="w-full"
-          loading={downloading === 'pdf'}
-          onClick={() => handleDownload('pdf')}
-        >
+        <Button variant="secondary" size="lg" className="w-full"
+          loading={downloading === 'pdf'} onClick={() => handleDownload('pdf')}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -157,13 +158,13 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         {config.vegItems.length > 0 && (
           <div>
             <div className="text-[10px] text-emerald-500 uppercase tracking-wide mb-1">🌿 Veg ({config.vegItems.length})</div>
-            <div className="text-xs text-stone-400">{config.vegItems.map(i => i.name).join(' · ')}</div>
+            <div className="text-xs text-stone-400 leading-relaxed">{config.vegItems.map(i => i.name).join(' · ')}</div>
           </div>
         )}
         {config.nonVegItems.length > 0 && (
           <div>
             <div className="text-[10px] text-red-400 uppercase tracking-wide mb-1">🍗 Non-Veg ({config.nonVegItems.length})</div>
-            <div className="text-xs text-stone-400">{config.nonVegItems.map(i => i.name).join(' · ')}</div>
+            <div className="text-xs text-stone-400 leading-relaxed">{config.nonVegItems.map(i => i.name).join(' · ')}</div>
           </div>
         )}
         {config.desserts.length > 0 && (

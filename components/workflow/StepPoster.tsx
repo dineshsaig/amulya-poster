@@ -11,11 +11,11 @@ interface StepPosterProps {
 }
 
 const FONT_OPTIONS = [
-  { id: 'book-antiqua', label: 'Book Antiqua',   value: '"Book Antiqua", "Palatino Linotype", Palatino, Georgia, serif' },
-  { id: 'georgia',      label: 'Georgia',         value: 'Georgia, "Times New Roman", serif' },
-  { id: 'garamond',     label: 'Garamond',        value: '"Garamond", "EB Garamond", Georgia, serif' },
-  { id: 'times',        label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
-  { id: 'palatino',     label: 'Palatino',        value: '"Palatino Linotype", Palatino, Georgia, serif' },
+  { id: 'book-antiqua', label: 'Book Antiqua',   value: 'Book Antiqua' },
+  { id: 'georgia',      label: 'Georgia',         value: 'Georgia' },
+  { id: 'garamond',     label: 'Garamond',        value: 'Garamond' },
+  { id: 'times',        label: 'Times New Roman', value: 'Times New Roman' },
+  { id: 'palatino',     label: 'Palatino',        value: 'Palatino Linotype' },
 ];
 
 export default function StepPoster({ config, onBack }: StepPosterProps) {
@@ -23,7 +23,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0].id);
 
-  const filename = getPosterFilename(config.day, config.mealType);
+  const filename   = getPosterFilename(config.day, config.mealType);
   const currentFont = FONT_OPTIONS.find(f => f.id === selectedFont)?.value ?? FONT_OPTIONS[0].value;
   const totalItems = config.vegItems.length + config.nonVegItems.length + config.desserts.length;
 
@@ -31,8 +31,8 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
     setShowSettings(false);
     setDownloading(type);
     try {
-      if (type === 'png') await downloadPNG('amulya-poster-export', filename);
-      else await downloadPDF('amulya-poster-export', filename);
+      if (type === 'png') await downloadPNG('', filename, config, currentFont);
+      else                await downloadPDF('', filename, config, currentFont);
     } catch (err) {
       console.error('Download failed:', err);
       alert('Download failed. Please try again.');
@@ -40,6 +40,9 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
       setDownloading(null);
     }
   }
+
+  const PREVIEW_SCALE = 0.29;
+  const PREVIEW_HEIGHT = Math.round(1536 * PREVIEW_SCALE);
 
   return (
     <div className="space-y-4">
@@ -70,7 +73,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         </button>
       </div>
 
-      {/* Settings panel */}
+      {/* Settings */}
       {showSettings && (
         <div className="bg-stone-900/60 rounded-xl p-4 border border-amber-700/20 space-y-3">
           <div className="text-[10px] text-amber-600 uppercase tracking-widest font-semibold">Font Style</div>
@@ -96,24 +99,11 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         </div>
       )}
 
-      {/* ── PREVIEW — CSS scaled for display only ── */}
+      {/* Preview — CSS scaled for display only */}
       <div className="flex justify-center overflow-hidden rounded-lg border border-stone-700/20"
-        style={{ height: 450 }}>
-        <div style={{ transform: 'scale(0.29)', transformOrigin: 'top center', width: 1024, flexShrink: 0 }}>
-          <PosterCanvas config={config} fontFamily={currentFont} />
-        </div>
-      </div>
-
-      {/* ── EXPORT ELEMENT — off-screen, full size, NO visibility:hidden ── */}
-      {/* opacity:0 + pointer-events:none is safe for html2canvas unlike visibility:hidden */}
-      <div style={{
-        position: 'fixed', left: '-1100px', top: 0,
-        width: 1024, zIndex: -999,
-        opacity: 1,   /* must NOT be visibility:hidden — breaks html2canvas */
-        pointerEvents: 'none',
-      }}>
-        <div id="amulya-poster-export">
-          <PosterCanvas config={config} fontFamily={currentFont} />
+        style={{ height: PREVIEW_HEIGHT }}>
+        <div style={{ transform: `scale(${PREVIEW_SCALE})`, transformOrigin: 'top center', width: 1024, flexShrink: 0 }}>
+          <PosterCanvas config={config} fontFamily={`"${currentFont}", Georgia, serif`} />
         </div>
       </div>
 
@@ -125,7 +115,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
           </svg>
-          Download PNG
+          Download PNG for WhatsApp
         </Button>
         <Button variant="secondary" size="lg" className="w-full"
           loading={downloading === 'pdf'} onClick={() => handleDownload('pdf')}>

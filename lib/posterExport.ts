@@ -2,16 +2,24 @@ import jsPDF from 'jspdf';
 
 async function getCanvas(elementId: string) {
   const { default: html2canvas } = await import('html2canvas');
+
+  // ── Use the HIDDEN full-size poster element for export, not the scaled preview
   const element = document.getElementById(elementId);
   if (!element) throw new Error('Poster element not found');
 
-  // Convert all images to base64 first to avoid CORS issues
+  // Reset any CSS transform so html2canvas sees natural size
+  const originalTransform = element.style.transform;
+  const originalTransformOrigin = element.style.transformOrigin;
+  element.style.transform = 'none';
+  element.style.transformOrigin = 'unset';
+
+  // Pre-load all images as base64 to avoid CORS issues
   const images = element.querySelectorAll('img');
   await Promise.all(
     Array.from(images).map(async (img) => {
       if (!img.src || img.src.startsWith('data:')) return;
       try {
-        const response = await fetch(img.src);
+        const response = await fetch(img.src, { cache: 'force-cache' });
         const blob = await response.blob();
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -19,28 +27,41 @@ async function getCanvas(elementId: string) {
           reader.readAsDataURL(blob);
         });
         img.src = base64;
-        await new Promise((res) => {
-          if (img.complete) res(null);
-          else img.onload = res;
+        await new Promise<void>((res) => {
+          if (img.complete) res();
+          else img.onload = () => res();
         });
       } catch {
-        // If fetch fails, continue without conversion
+        // continue if fetch fails
       }
     })
   );
 
-  return html2canvas(element, {
-    scale: 3,
+  const canvas = await html2canvas(element, {
+    scale: 3,             // 3× = 1260px wide — crisp print quality
     useCORS: true,
     allowTaint: true,
     backgroundColor: '#F5EDD0',
     logging: false,
     imageTimeout: 30000,
+    width: element.scrollWidth,
+    height: element.scrollHeight,
   });
+
+  // Restore transform
+  element.style.transform = originalTransform;
+  element.style.transformOrigin = originalTransformOrigin;
+
+  return canvas;
 }
 
 export async function downloadPNG(elementId: string, filename: string): Promise<void> {
-  const canvas = await getCanvas(elementId);
+  // ── Target the export element (full-size hidden), not the preview
+  const exportId = elementId + '-export';
+  const exportEl = document.getElementById(exportId);
+  const targetId = exportEl ? exportId : elementId;
+
+  const canvas = await getCanvas(targetId);
   const link = document.createElement('a');
   link.download = `${filename}.png`;
   link.href = canvas.toDataURL('image/png', 1.0);
@@ -48,9 +69,13 @@ export async function downloadPNG(elementId: string, filename: string): Promise<
 }
 
 export async function downloadPDF(elementId: string, filename: string): Promise<void> {
-  const canvas = await getCanvas(elementId);
+  const exportId = elementId + '-export';
+  const exportEl = document.getElementById(exportId);
+  const targetId = exportEl ? exportId : elementId;
+
+  const canvas = await getCanvas(targetId);
   const imgData = canvas.toDataURL('image/png', 1.0);
-  const pdfWidth = 108;
+  const pdfWidth  = 108; // mm (A5-ish, 9:16 ratio)
   const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
   const pdf = new jsPDF({

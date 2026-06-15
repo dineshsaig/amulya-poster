@@ -6,98 +6,126 @@ interface PosterCanvasProps {
   config: PosterConfig;
 }
 
-function GoldLine() {
+/* ══ Gold ornament SVG divider (thin line + scroll centre) ══ */
+function GoldScrollDivider() {
   return (
-    <div style={{
-      height: 1.5,
-      background: 'linear-gradient(90deg, transparent 0%, #B8860B 20%, #DAA520 50%, #B8860B 80%, transparent 100%)',
-      margin: '2px 0',
-    }} />
-  );
-}
-
-function ScrollDivider() {
-  return (
-    <svg viewBox="0 0 260 12" style={{ display: 'block', width: '100%', height: 12 }} xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 420 18" style={{ display:'block', width:'100%', height:18 }} xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="sdg2" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id="gsd" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%"   stopColor="#8B6914" stopOpacity="0"/>
-          <stop offset="35%"  stopColor="#DAA520"/>
-          <stop offset="65%"  stopColor="#DAA520"/>
+          <stop offset="25%"  stopColor="#B8860B"/>
+          <stop offset="50%"  stopColor="#DAA520"/>
+          <stop offset="75%"  stopColor="#B8860B"/>
           <stop offset="100%" stopColor="#8B6914" stopOpacity="0"/>
         </linearGradient>
       </defs>
-      <line x1="0" y1="6" x2="260" y2="6" stroke="url(#sdg2)" strokeWidth="0.8"/>
-      <circle cx="130" cy="6" r="3.5" fill="none" stroke="#DAA520" strokeWidth="1"/>
-      <circle cx="130" cy="6" r="1.5" fill="#DAA520"/>
-      <circle cx="108" cy="6" r="1.5" fill="none" stroke="#DAA520" strokeWidth="0.7"/>
-      <circle cx="152" cy="6" r="1.5" fill="none" stroke="#DAA520" strokeWidth="0.7"/>
-      <line x1="88"  y1="6" x2="103" y2="6" stroke="#DAA520" strokeWidth="0.7"/>
-      <line x1="157" y1="6" x2="172" y2="6" stroke="#DAA520" strokeWidth="0.7"/>
+      <line x1="0" y1="9" x2="420" y2="9" stroke="url(#gsd)" strokeWidth="1"/>
+      {/* centre scroll */}
+      <ellipse cx="210" cy="9" rx="9" ry="6" fill="none" stroke="#B8860B" strokeWidth="1.2"/>
+      <ellipse cx="210" cy="9" rx="4" ry="3" fill="#B8860B"/>
+      {/* left scroll motif */}
+      <path d="M175,9 Q183,4 190,9 Q183,14 175,9Z" fill="none" stroke="#B8860B" strokeWidth="0.9"/>
+      {/* right scroll motif */}
+      <path d="M245,9 Q237,4 230,9 Q237,14 245,9Z" fill="none" stroke="#B8860B" strokeWidth="0.9"/>
+      {/* tick lines */}
+      <line x1="155" y1="6" x2="155" y2="12" stroke="#B8860B" strokeWidth="0.8"/>
+      <line x1="265" y1="6" x2="265" y2="12" stroke="#B8860B" strokeWidth="0.8"/>
     </svg>
   );
 }
 
-function SectionBadge({ label, color }: { label: string; color: 'green' | 'maroon' | 'gold' }) {
-  const cfg = {
-    green:  { bg: '#1B4D1B', border: '#DAA520', text: '#F5DEB3' },
-    maroon: { bg: '#5C0A14', border: '#DAA520', text: '#F5DEB3' },
-    gold:   { bg: '#7A5C0A', border: '#DAA520', text: '#FFFACD' },
-  }[color];
+/* ══ Section panel — matches the reference card style ══ */
+function SectionPanel({
+  children, headerBg, headerText, headerLabel,
+  borderColor = '#B8860B',
+}: {
+  children: React.ReactNode;
+  headerBg: string;
+  headerText: string;
+  headerLabel: string;
+  borderColor?: string;
+}) {
   return (
     <div style={{
-      background: cfg.bg,
-      border: `1.5px solid ${cfg.border}`,
-      borderRadius: 3,
-      padding: '3px 6px',
-      textAlign: 'center',
-      marginBottom: 5,
+      border: `1.5px solid ${borderColor}`,
+      borderRadius: 2,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
     }}>
-      <div style={{ height: 1, background: cfg.border, marginBottom: 2, opacity: 0.5 }} />
-      <span style={{
-        fontSize: 9.5, fontWeight: 800, color: cfg.text,
-        letterSpacing: '0.1em', textTransform: 'uppercase',
-        fontFamily: 'Georgia, serif',
+      {/* Header badge */}
+      <div style={{
+        background: headerBg,
+        padding: '5px 6px 4px',
+        textAlign: 'center',
+        borderBottom: `1.5px solid ${borderColor}`,
+        position: 'relative',
       }}>
-        ✦ {label} ✦
-      </span>
-      <div style={{ height: 1, background: cfg.border, marginTop: 2, opacity: 0.5 }} />
+        {/* top gold line */}
+        <div style={{ height:1, background:'rgba(218,165,32,0.5)', marginBottom:2 }}/>
+        <span style={{
+          fontSize: 10.5, fontWeight: 900, color: headerText,
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          fontFamily: '"Book Antiqua", Palatino, Georgia, serif',
+          textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+        }}>
+          {headerLabel}
+        </span>
+        <div style={{ height:1, background:'rgba(218,165,32,0.5)', marginTop:2 }}/>
+      </div>
+      {/* Body */}
+      <div style={{
+        flex: 1,
+        padding: '6px 7px',
+        background: 'rgba(255,252,235,0.6)',
+      }}>
+        {children}
+      </div>
     </div>
   );
 }
 
-function VegItem({ name }: { name: string }) {
+/* ══ Menu item row ══ */
+function Item({ name, dotColor }: { name: string; dotColor: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 2 }}>
-      <span style={{ color: '#2E7D32', fontSize: 7, flexShrink: 0, marginTop: 2, lineHeight: 1 }}>●</span>
-      <span style={{ fontSize: 9, color: '#1A0800', fontFamily: 'Georgia,serif', lineHeight: 1.3, wordBreak: 'break-word' }}>
+    <div style={{ display:'flex', alignItems:'flex-start', gap:5, marginBottom:3.5 }}>
+      <span style={{
+        width:6, height:6, borderRadius:'50%', background:dotColor,
+        flexShrink:0, marginTop:3, display:'inline-block',
+      }}/>
+      <span style={{
+        fontSize: 9.5, color:'#1A0800', lineHeight:1.32,
+        fontFamily:'"Book Antiqua", Palatino, Georgia, serif',
+      }}>
         {name}
       </span>
     </div>
   );
 }
 
-function NonVegItem({ name }: { name: string }) {
+/* ══ Corner image ══ */
+function CornerImg({ pos }: { pos:'tl'|'tr'|'bl'|'br' }) {
+  const isRight = pos.endsWith('r');
+  const isBottom = pos.startsWith('b');
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 2 }}>
-      <span style={{ color: '#B71C1C', fontSize: 7, flexShrink: 0, marginTop: 2, lineHeight: 1 }}>●</span>
-      <span style={{ fontSize: 9, color: '#1A0800', fontFamily: 'Georgia,serif', lineHeight: 1.3, wordBreak: 'break-word' }}>
-        {name}
-      </span>
-    </div>
-  );
-}
-
-function SideItem({ name, diamond = false }: { name: string; diamond?: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, marginBottom: 2 }}>
-      <span style={{ color: diamond ? '#DAA520' : '#8B6914', fontSize: diamond ? 7 : 7, flexShrink: 0, marginTop: 2, lineHeight: 1 }}>
-        {diamond ? '◆' : '●'}
-      </span>
-      <span style={{ fontSize: 9, color: '#1A0800', fontFamily: 'Georgia,serif', lineHeight: 1.3, wordBreak: 'break-word' }}>
-        {name}
-      </span>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/corner-${pos}.png`}
+      alt=""
+      crossOrigin="anonymous"
+      style={{
+        position:'absolute',
+        width: 52, height: 52,
+        top:    isBottom ? undefined : 2,
+        bottom: isBottom ? 2 : undefined,
+        left:   isRight  ? undefined : 2,
+        right:  isRight  ? 2 : undefined,
+        opacity: 0.92,
+        pointerEvents:'none',
+        zIndex: 5,
+      }}
+    />
   );
 }
 
@@ -115,191 +143,200 @@ export default function PosterCanvas({ config }: PosterCanvasProps) {
         position: 'relative',
         width: 420,
         overflow: 'hidden',
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        background: 'linear-gradient(170deg, #FBF0D2 0%, #F4E3B0 50%, #EDD898 100%)',
+        fontFamily: '"Book Antiqua", Palatino, Georgia, serif',
+        /* exact cream from reference */
+        background: '#F5EDD0',
       }}
     >
-      {/* grain texture */}
+      {/* subtle warm gradient */}
       <div style={{
-        position: 'absolute', inset: 0, opacity: 0.035, pointerEvents: 'none', zIndex: 0,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'repeat',
-      }} />
-      {/* outer border */}
-      <div style={{ position: 'absolute', inset: 5, border: '2px solid #B8860B', zIndex: 0, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', inset: 9, border: '0.75px solid rgba(184,134,11,0.35)', zIndex: 0, pointerEvents: 'none' }} />
+        position:'absolute', inset:0, pointerEvents:'none', zIndex:0,
+        background:'radial-gradient(ellipse at 50% 30%, rgba(255,248,210,0.6) 0%, transparent 70%)',
+      }}/>
 
-      <div style={{ position: 'relative', zIndex: 1, padding: '10px 12px 0' }}>
+      {/* outer border matching reference */}
+      <div style={{
+        position:'absolute', inset:6, border:'1.5px solid #B8860B',
+        zIndex:0, pointerEvents:'none',
+      }}/>
+      <div style={{
+        position:'absolute', inset:10, border:'0.5px solid rgba(184,134,11,0.3)',
+        zIndex:0, pointerEvents:'none',
+      }}/>
 
-        {/* ── HEADER ROW ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+      {/* Corner ornaments from reference */}
+      <CornerImg pos="tl"/>
+      <CornerImg pos="tr"/>
+      <CornerImg pos="bl"/>
+      <CornerImg pos="br"/>
 
-          {/* Fresh/Homemade/Authentic badge */}
-          <div style={{
-            width: 60, height: 60, borderRadius: '50%', flexShrink: 0,
-            background: 'radial-gradient(circle at 40% 40%, #2E6B2E, #0F2D0F)',
-            border: '2.5px solid #DAA520',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              {['FRESH', 'HOME', 'MADE', 'AUTHEN', 'TIC'].map((w, i) => (
-                <div key={i} style={{ fontSize: 6.5, fontWeight: 900, color: '#F5DEB3', letterSpacing: '0.03em', lineHeight: 1.25 }}>
-                  {w}
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* ══════════ CONTENT ══════════ */}
+      <div style={{ position:'relative', zIndex:1, padding:'12px 14px 0' }}>
 
-          {/* Centre logo — just use the full logo image, no text overlay */}
-          <div style={{ flex: 1, textAlign: 'center' }}>
+        {/* ── HEADER: Logo + Lady ── */}
+        <div style={{ position:'relative', marginBottom:4, minHeight:82 }}>
+
+          {/* Amulya logo centred */}
+          <div style={{ textAlign:'center', paddingRight:50 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/amulya-logo.png"
               alt="Amulya Indian Cuisine"
               crossOrigin="anonymous"
-              style={{ width: 185, display: 'inline-block' }}
+              style={{ width:210, display:'inline-block' }}
             />
           </div>
 
-          {/* Lady illustration — cropped tighter */}
-          <div style={{ width: 64, flexShrink: 0, display: 'flex', alignItems: 'flex-end' }}>
+          {/* Lady — absolute top right */}
+          <div style={{
+            position:'absolute', top:-8, right:-8,
+            width:98,
+          }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/amulya-lady.png"
+              src="/ref-lady.png"
               alt=""
               crossOrigin="anonymous"
-              style={{ width: 64, display: 'block' }}
+              style={{ width:'100%', display:'block' }}
             />
           </div>
         </div>
 
-        <ScrollDivider />
+        {/* gold scroll divider */}
+        <GoldScrollDivider />
 
-        {/* ── DAY + MEAL TITLE ── */}
+        {/* ── DAY · MEAL TITLE ── */}
         <div style={{
-          textAlign: 'center',
-          background: 'linear-gradient(90deg,transparent,rgba(139,26,16,0.09),rgba(139,26,16,0.13),rgba(139,26,16,0.09),transparent)',
-          borderTop: '1.5px solid #B8860B',
-          borderBottom: '1.5px solid #B8860B',
-          padding: '4px 6px 4px',
-          margin: '3px -4px 4px',
+          textAlign:'center',
+          padding:'5px 0 4px',
+          margin:'2px 0',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            <span style={{ color: '#8B6914', fontSize: 11 }}>❧</span>
-            <div>
-              <div style={{
-                fontSize: 18,
-                fontWeight: 900,
-                color: '#7A1208',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-                lineHeight: 1.1,
-                textShadow: '0 1px 2px rgba(0,0,0,0.12)',
-                fontFamily: 'Georgia, serif',
-              }}>
-                {day} {mealType}
-              </div>
-              <div style={{
-                fontSize: 14,
-                fontWeight: 900,
-                color: '#5C0800',
-                letterSpacing: '0.3em',
-                textTransform: 'uppercase',
-                lineHeight: 1,
-              }}>
-                BUFFET
-              </div>
-            </div>
-            <span style={{ color: '#8B6914', fontSize: 11 }}>❧</span>
+          <div style={{
+            fontSize: 22,
+            fontWeight: 900,
+            color: '#8B0000',
+            letterSpacing: '0.03em',
+            textTransform: 'uppercase',
+            lineHeight: 1.05,
+            fontFamily:'"Book Antiqua", Palatino, Georgia, serif',
+            textShadow:'0 1px 3px rgba(0,0,0,0.12)',
+          }}>
+            {day} {mealType}
           </div>
-          <div style={{ fontSize: 8, color: '#7B5010', letterSpacing: '0.15em', marginTop: 2 }}>
+          <div style={{
+            fontSize: 17,
+            fontWeight: 900,
+            color: '#6B0000',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            lineHeight: 1,
+          }}>
+            BUFFET
+          </div>
+          <div style={{
+            fontSize: 8.5,
+            color: '#7B5510',
+            letterSpacing: '0.15em',
+            marginTop: 2,
+          }}>
             {dateStr}
           </div>
         </div>
 
-        {/* ── 3-COLUMN GRID ── */}
+        <GoldScrollDivider />
+
+        {/* ── 3-COLUMN MENU PANELS ── */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '155px 96px 155px',
-          gap: 4,
-          marginBottom: 4,
-          alignItems: 'start',
+          display:'grid',
+          gridTemplateColumns:'1fr 100px 1fr',
+          gap:5,
+          margin:'5px 0 5px',
+          alignItems:'start',
         }}>
 
-          {/* LEFT — VEG */}
-          <div>
-            <SectionBadge label="Veg Items" color="green" />
+          {/* LEFT — VEG ITEMS */}
+          <SectionPanel
+            headerLabel="Veg Items"
+            headerBg="#1B5E1B"
+            headerText="#F5DEB3"
+          >
             {vegItems.length === 0
-              ? <div style={{ fontSize: 8, color: '#999', textAlign: 'center' }}>None selected</div>
-              : vegItems.map(item => <VegItem key={item.id} name={item.name} />)
+              ? <div style={{fontSize:8.5,color:'#aaa',textAlign:'center',paddingTop:8}}>—</div>
+              : vegItems.map(item => <Item key={item.id} name={item.name} dotColor="#2E7D32"/>)
             }
-          </div>
+          </SectionPanel>
 
           {/* CENTRE — ACCOMPANIMENTS + DESSERTS */}
-          <div>
-            <SectionBadge label="Sides" color="gold" />
-            {accompaniments.map(item => <SideItem key={item.id} name={item.name} />)}
+          <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+            <SectionPanel
+              headerLabel="Sides"
+              headerBg="#8B6914"
+              headerText="#FFFACD"
+            >
+              {accompaniments.map(item => <Item key={item.id} name={item.name} dotColor="#8B6914"/>)}
+            </SectionPanel>
 
             {desserts.length > 0 && (
-              <div style={{ marginTop: 6 }}>
-                <SectionBadge label="Desserts" color="maroon" />
-                {desserts.map(item => <SideItem key={item.id} name={item.name} diamond />)}
-              </div>
+              <SectionPanel
+                headerLabel="Desserts"
+                headerBg="#5C0A14"
+                headerText="#F5DEB3"
+              >
+                {desserts.map(item => <Item key={item.id} name={item.name} dotColor="#DAA520"/>)}
+              </SectionPanel>
             )}
           </div>
 
-          {/* RIGHT — NON-VEG */}
-          <div>
-            <SectionBadge label="Non-Veg Items" color="maroon" />
+          {/* RIGHT — NON-VEG ITEMS */}
+          <SectionPanel
+            headerLabel="Non-Veg Items"
+            headerBg="#5C0A14"
+            headerText="#F5DEB3"
+          >
             {nonVegItems.length === 0
-              ? <div style={{ fontSize: 8, color: '#999', textAlign: 'center' }}>None selected</div>
-              : nonVegItems.map(item => <NonVegItem key={item.id} name={item.name} />)
+              ? <div style={{fontSize:8.5,color:'#aaa',textAlign:'center',paddingTop:8}}>—</div>
+              : nonVegItems.map(item => <Item key={item.id} name={item.name} dotColor="#B71C1C"/>)
             }
-          </div>
-
+          </SectionPanel>
         </div>
 
-        <GoldLine />
+        {/* thin gold line before food strip */}
+        <div style={{
+          height:1,
+          background:'linear-gradient(90deg,transparent,#B8860B 20%,#DAA520 50%,#B8860B 80%,transparent)',
+          margin:'3px 0 0',
+        }}/>
 
-      </div>
+      </div>{/* /content */}
 
-      {/* ── FOOD STRIP ── */}
-      <div style={{ height: 100, overflow: 'hidden', position: 'relative' }}>
+      {/* ── REAL FOOD PHOTO STRIP ── */}
+      <div style={{ position:'relative', overflow:'hidden', height:112 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/food-strip.png"
           alt=""
           crossOrigin="anonymous"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 35%', display: 'block' }}
+          style={{
+            width:'100%', height:'100%',
+            objectFit:'cover', objectPosition:'center 20%',
+            display:'block',
+          }}
         />
+        {/* blend top edge with poster */}
         <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 18,
-          background: 'linear-gradient(to bottom, #EDD898, transparent)',
-        }} />
+          position:'absolute', top:0, left:0, right:0, height:16,
+          background:'linear-gradient(to bottom, #F5EDD0, transparent)',
+        }}/>
       </div>
 
-      {/* ── FOOTER BANNER ── */}
-      <div style={{
-        background: 'linear-gradient(90deg, #0D270D, #1B4D1B, #0D270D)',
-        borderTop: '2px solid #DAA520',
-        padding: '6px 12px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0,
-      }}>
-        {['FRESH', 'HOMEMADE', 'AUTHENTIC'].map((word, i) => (
-          <React.Fragment key={word}>
-            <span style={{
-              fontSize: 11, fontWeight: 900, color: '#F5DEB3',
-              letterSpacing: '0.22em', textTransform: 'uppercase',
-              fontFamily: 'Georgia, serif',
-              textShadow: '0 1px 3px rgba(0,0,0,0.6)',
-            }}>
-              {word}
-            </span>
-            {i < 2 && <span style={{ color: '#DAA520', fontSize: 14, margin: '0 10px' }}>●</span>}
-          </React.Fragment>
-        ))}
-      </div>
+      {/* ── FOOTER BAR from reference ── */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/footer-bar.png"
+        alt=""
+        crossOrigin="anonymous"
+        style={{ width:'100%', display:'block' }}
+      />
 
     </div>
   );

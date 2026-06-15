@@ -1,26 +1,46 @@
 import jsPDF from 'jspdf';
 
-export async function downloadPNG(elementId: string, filename: string): Promise<void> {
+async function getCanvas(elementId: string) {
   const { default: html2canvas } = await import('html2canvas');
   const element = document.getElementById(elementId);
   if (!element) throw new Error('Poster element not found');
 
-  const canvas = await html2canvas(element, {
+  // Convert all images to base64 first to avoid CORS issues
+  const images = element.querySelectorAll('img');
+  await Promise.all(
+    Array.from(images).map(async (img) => {
+      if (!img.src || img.src.startsWith('data:')) return;
+      try {
+        const response = await fetch(img.src);
+        const blob = await response.blob();
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        img.src = base64;
+        await new Promise((res) => {
+          if (img.complete) res(null);
+          else img.onload = res;
+        });
+      } catch {
+        // If fetch fails, continue without conversion
+      }
+    })
+  );
+
+  return html2canvas(element, {
     scale: 3,
     useCORS: true,
     allowTaint: true,
     backgroundColor: '#F5EDD0',
     logging: false,
-    imageTimeout: 15000,
-    onclone: (clonedDoc) => {
-      // ensure images in clone have crossOrigin set
-      const imgs = clonedDoc.querySelectorAll('img');
-      imgs.forEach((img) => {
-        img.crossOrigin = 'anonymous';
-      });
-    },
+    imageTimeout: 30000,
   });
+}
 
+export async function downloadPNG(elementId: string, filename: string): Promise<void> {
+  const canvas = await getCanvas(elementId);
   const link = document.createElement('a');
   link.download = `${filename}.png`;
   link.href = canvas.toDataURL('image/png', 1.0);
@@ -28,19 +48,7 @@ export async function downloadPNG(elementId: string, filename: string): Promise<
 }
 
 export async function downloadPDF(elementId: string, filename: string): Promise<void> {
-  const { default: html2canvas } = await import('html2canvas');
-  const element = document.getElementById(elementId);
-  if (!element) throw new Error('Poster element not found');
-
-  const canvas = await html2canvas(element, {
-    scale: 3,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#F5EDD0',
-    logging: false,
-    imageTimeout: 15000,
-  });
-
+  const canvas = await getCanvas(elementId);
   const imgData = canvas.toDataURL('image/png', 1.0);
   const pdfWidth = 108;
   const pdfHeight = (canvas.height * pdfWidth) / canvas.width;

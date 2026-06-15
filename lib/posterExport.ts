@@ -38,7 +38,7 @@ async function getCanvas(elementId: string) {
   );
 
   const canvas = await html2canvas(element, {
-    scale: 3,             // 3× = 1260px wide — crisp print quality
+    scale: 2,  // 2x = 2048px wide — print quality             // 3× = 1260px wide — crisp print quality
     useCORS: true,
     allowTaint: true,
     backgroundColor: '#F5EDD0',

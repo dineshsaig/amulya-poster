@@ -100,8 +100,8 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
       )}
 
       {/* ── SCALED PREVIEW (display only) ── */}
-      <div className="flex justify-center overflow-hidden" style={{ height: 310 }}>
-        <div style={{ transform: 'scale(0.72)', transformOrigin: 'top center' }}>
+      <div className="flex justify-center overflow-hidden" style={{ height: 470 }}>
+        <div style={{ transform: 'scale(0.3)', transformOrigin: 'top center' }}>
           <PosterCanvas config={config} fontFamily={currentFont} />
         </div>
       </div>

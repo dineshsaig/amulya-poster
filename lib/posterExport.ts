@@ -2,48 +2,48 @@ import jsPDF from 'jspdf';
 import { PosterConfig } from '@/types';
 
 /*
- * posterExport.ts — v22  PIXEL-PERFECT
+ * posterExport.ts — v23  FIXED-FONT + SMART WRAP
  *
- * Every value below is derived from pixel-scanning the actual
- * downloaded poster, not guessed.
+ * All columns (Veg, NonVeg, Sides, Desserts) use the SAME fixed
+ * font size. Long names wrap to a second line at a word boundary
+ * instead of shrinking the font. This produces a clean, consistent
+ * look across the whole poster.
  *
  * ═══════════════════════════════════════════════════════════════
- *  INNER CONTENT BOXES  (1024 × 1819 template)
+ *  PIXEL-ACCURATE BOXES  (1024 × 1819 template, scanned)
  * ═══════════════════════════════════════════════════════════════
- *  Measured from template border lines at y=800 scan:
- *
  *  TITLE:    x=30,  y=252, w=964, h=175
  *  VEG:      x=20,  y=539, w=318, h=754   right=338
- *  SIDES:    x=355, y=555, w=295, h=408   right=650  (badge ends ~y=548)
- *  DESSERTS: x=355, y=1100,w=295, h=193   right=650  (label ends ~y=1092)
- *  NONVEG:   x=692, y=539, w=295, h=754   right=987  (border x=672-689, safe start 692)
+ *  SIDES:    x=355, y=555, w=295, h=408   right=650
+ *  DESSERTS: x=355, y=1100,w=295, h=193   right=650
+ *  NONVEG:   x=692, y=539, w=295, h=754   right=987
  *
  * ═══════════════════════════════════════════════════════════════
- *  FONT + SPACING  (3 rules)
+ *  TYPOGRAPHY RULES
  * ═══════════════════════════════════════════════════════════════
- *  1. UNIFORM SIZE — one size for the whole column.
- *     Reduce from maxFont until every item fits maxTextW.
- *
- *  2. TOP-ALIGNED — items start at box.y (no vertical centering).
- *     Previous centring caused a blank gap at the column tops.
- *
- *  3. CAPPED LINE-HEIGHT — lineH = min(boxH/n, fontSize×2.0)
- *     Prevents over-spreading when items are few.
+ *  FIXED_FONT = 28px  (same for every column)
+ *  LINE_H     = 38px  (per visual line — tight, readable)
+ *  ITEM_GAP   = 5px   (extra space between items, not between wrapped lines)
+ *  WRAP: if name > maxW → split at last word boundary before overflow
+ *        max 2 lines; line 2 indented to text_x (no bullet on line 2)
  */
 
 const W = 1024;
 const H = 1819;
 
-const BOXES = {
-  title:    { x: 30,  y: 252,  w: 964, h: 175 },
-  veg:      { x: 20,  y: 539,  w: 318, h: 754 },
-  sides:    { x: 355, y: 555,  w: 295, h: 408 },
-  desserts: { x: 355, y: 1100, w: 295, h: 193 },
-  nonveg:   { x: 692, y: 539,  w: 295, h: 754 },
-} as const;
+// ── Layout constants ────────────────────────────────────────────
+const FIXED_FONT = 28;   // px — same for ALL columns
+const LINE_H     = 38;   // px per visual line
+const ITEM_GAP   =  5;   // px between consecutive items
+const DOT_R      =  7;   // px bullet radius
 
-// Fixed dot radius — small enough to leave max text room
-const DOT_R = 7;
+const BOXES = {
+  title:    { x:  30, y: 252, w: 964, h: 175 },
+  veg:      { x:  20, y: 539, w: 318, h: 754 },
+  sides:    { x: 355, y: 555, w: 295, h: 408 },
+  desserts: { x: 355, y:1100, w: 295, h: 193 },
+  nonveg:   { x: 692, y: 539, w: 295, h: 754 },
+} as const;
 
 function fontStack(size: number, bold = false): string {
   return `${bold ? 'bold ' : ''}${size}px "Book Antiqua","Palatino Linotype",Palatino,Georgia,serif`;
@@ -59,55 +59,86 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/**
+ * Split a name into 1 or 2 lines so each line fits within maxW.
+ * Uses ctx.measureText() for exactness (no char-count guessing).
+ * Never produces more than 2 lines; truncates line 2 if necessary.
+ */
+function smartWrap(
+  ctx: CanvasRenderingContext2D,
+  name: string,
+  maxW: number,
+): [string] | [string, string] {
+  if (ctx.measureText(name).width <= maxW) return [name];
+
+  // Find the best split point — last space where line 1 fits
+  const words = name.split(' ');
+  let splitIdx = words.length - 1;           // default: all but last word
+
+  for (let i = words.length - 1; i >= 1; i--) {
+    const candidate = words.slice(0, i).join(' ');
+    if (ctx.measureText(candidate).width <= maxW) {
+      splitIdx = i;
+      break;
+    }
+  }
+
+  const line1 = words.slice(0, splitIdx).join(' ') || words[0];
+  let   line2 = words.slice(splitIdx).join(' ');
+
+  // Truncate line 2 if it still overflows
+  while (line2.length > 1 && ctx.measureText(line2).width > maxW) {
+    line2 = line2.slice(0, -1).trimEnd();
+  }
+  if (line2 !== words.slice(splitIdx).join(' ')) line2 = line2 + '…';
+
+  return [line1, line2];
+}
+
+/**
+ * Draw a column of items with FIXED font, smart word-wrap, and
+ * top-aligned layout with natural item spacing.
+ */
 function drawItems(
   ctx: CanvasRenderingContext2D,
   items: { name: string }[],
   box: { x: number; y: number; w: number; h: number },
   dotColor: string,
-  opts: { minFont?: number; maxFont?: number } = {},
 ) {
   if (items.length === 0) return;
-  const { minFont = 18, maxFont = 52 } = opts;
-  const n = items.length;
 
-  // Dot and text geometry
-  const dotCX  = box.x + 6 + DOT_R;           // dot centre x
-  const textX  = dotCX + DOT_R + 9;            // text start x
-  const maxW   = box.x + box.w - textX - 6;    // max text width
+  const dotCX = box.x + 6 + DOT_R;
+  const textX = dotCX + DOT_R + 9;
+  const maxW  = box.x + box.w - textX - 6;
 
-  // ── Rule 1: UNIFORM font — largest that fits ALL items ─────
-  let fs = maxFont;
-  ctx.font = fontStack(fs);
-  while (fs > minFont) {
-    ctx.font = fontStack(fs);
-    if (items.every(it => ctx.measureText(it.name).width <= maxW)) break;
-    fs -= 1;
-  }
-
-  // ── Rule 2 & 3: TOP-aligned + capped line height ───────────
-  const lineH  = Math.min(box.h / n, fs * 2.0);   // natural spacing cap
-  const startY = box.y;                             // TOP aligned — no centering
-
+  ctx.font         = fontStack(FIXED_FONT);
   ctx.textBaseline = 'middle';
 
-  items.forEach((item, i) => {
-    const cy = startY + i * lineH + lineH * 0.5;
+  let curY = box.y;   // current draw position — top-aligned
 
-    // Dot
-    ctx.beginPath();
-    ctx.arc(dotCX, cy, DOT_R, 0, Math.PI * 2);
-    ctx.fillStyle = dotColor;
-    ctx.fill();
+  items.forEach((item) => {
+    const lines = smartWrap(ctx, item.name, maxW);
+    const itemH = lines.length * LINE_H;
 
-    // Text — truncate only at absolute minimum
-    ctx.fillStyle = '#1A0800';
-    let label = item.name;
-    if (ctx.measureText(label).width > maxW) {
-      while (label.length > 3 && ctx.measureText(label + '…').width > maxW)
-        label = label.slice(0, -1);
-      label = label.trimEnd() + '…';
-    }
-    ctx.fillText(label, textX, cy);
+    // Safety: don't draw past the bottom of the box
+    if (curY + itemH > box.y + box.h) return;
+
+    lines.forEach((line, li) => {
+      const cy = curY + li * LINE_H + LINE_H * 0.5;
+
+      if (li === 0) {
+        // Bullet dot on first line only
+        ctx.beginPath();
+        ctx.arc(dotCX, cy, DOT_R, 0, Math.PI * 2);
+        ctx.fillStyle = dotColor;
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#1A0800';
+      ctx.fillText(line, textX, cy);
+    });
+
+    curY += itemH + ITEM_GAP;
   });
 }
 
@@ -143,12 +174,14 @@ export async function generatePosterCanvas(
 
   ctx.drawImage(templateImg, 0, 0, W, H);
 
-  drawTitle(ctx, `${day} ${mealType} Buffet`, BOXES.title);
+  // Draw all sections — same font everywhere
+  ctx.font = fontStack(FIXED_FONT);
 
-  drawItems(ctx, vegItems,       BOXES.veg,      '#1A6E1A', { minFont: 18, maxFont: 52 });
-  drawItems(ctx, accompaniments, BOXES.sides,    '#5C5C2E', { minFont: 16, maxFont: 32 });
-  drawItems(ctx, desserts,       BOXES.desserts, '#A05000', { minFont: 16, maxFont: 36 });
-  drawItems(ctx, nonVegItems,    BOXES.nonveg,   '#8B0000', { minFont: 18, maxFont: 52 });
+  drawTitle(ctx, `${day} ${mealType} Buffet`, BOXES.title);
+  drawItems(ctx, vegItems,       BOXES.veg,      '#1A6E1A');
+  drawItems(ctx, accompaniments, BOXES.sides,    '#5C5C2E');
+  drawItems(ctx, desserts,       BOXES.desserts, '#A05000');
+  drawItems(ctx, nonVegItems,    BOXES.nonveg,   '#8B0000');
 
   return canvas;
 }

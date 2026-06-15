@@ -1,14 +1,10 @@
 'use client';
 /**
- * PosterCanvas.tsx — v22 PIXEL-PERFECT
+ * PosterCanvas.tsx — v23  FIXED-FONT + SMART WRAP
  *
- * Mirrors posterExport.ts v22 exactly.
- *
- * KEY CHANGES from v21:
- *  • BOXES x/y corrected from pixel scan of real template borders
- *  • TOP-ALIGNED: startY = box.y  (no more vertical centering)
- *  • lineH capped at fontSize×2.0  (natural spacing, no over-spreading)
- *  • NONVEG x=692 (was 678 — was landing ON the column border line)
+ * All columns use FIXED_FONT = 28px.
+ * Long names wrap at word boundaries (same logic as posterExport.ts).
+ * Layout is top-aligned with natural item spacing.
  *
  * BOX MAP (1024 × 1819):
  *   TITLE:    x=30,  y=252, w=964, h=175
@@ -21,101 +17,114 @@
 import React, { useMemo, CSSProperties } from 'react';
 import { PosterConfig } from '@/types';
 
-const TW   = 1024;
-const TH   = 1819;
-const DOT_R = 7;   // fixed dot radius, same as posterExport.ts
+// ── Constants mirror posterExport.ts exactly ────────────────────
+const TW         = 1024;
+const TH         = 1819;
+const FIXED_FONT = 28;    // px in template space
+const LINE_H     = 38;    // px per visual line
+const ITEM_GAP   =  5;    // px between items
+const DOT_R      =  7;    // px bullet radius
 
-const pct = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
-const vw  = (v: number)                => `${((v / TW) * 100).toFixed(3)}vw`;
+// Book Antiqua glyph width ≈ 0.60× font-size per character
+// (used only for preview width estimation; canvas uses measureText)
+const CHAR_W     = 0.60;
 
 interface Box { x: number; y: number; w: number; h: number }
 
 const BOXES: Record<string, Box> = {
-  title:    { x: 30,  y: 252,  w: 964, h: 175 },
-  veg:      { x: 20,  y: 539,  w: 318, h: 754 },
-  sides:    { x: 355, y: 555,  w: 295, h: 408 },
-  desserts: { x: 355, y: 1100, w: 295, h: 193 },
-  nonveg:   { x: 692, y: 539,  w: 295, h: 754 },
+  title:    { x:  30, y: 252, w: 964, h: 175 },
+  veg:      { x:  20, y: 539, w: 318, h: 754 },
+  sides:    { x: 355, y: 555, w: 295, h: 408 },
+  desserts: { x: 355, y:1100, w: 295, h: 193 },
+  nonveg:   { x: 692, y: 539, w: 295, h: 754 },
 };
 
-/**
- * Same uniform-font algorithm as posterExport.ts.
- * Approximates Book Antiqua width as fontSize × 0.60 per char.
- */
-function calcUniformFont(
-  items: { name: string }[],
-  box: Box,
-  minFont: number,
-  maxFont: number,
-): number {
-  if (items.length === 0) return maxFont;
-  const dotCX   = box.x + 6 + DOT_R;
-  const textX   = dotCX + DOT_R + 9;
-  const maxW    = box.x + box.w - textX - 6;
-  const longest = Math.max(...items.map(it => it.name.length));
+const pct  = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
+const tovw = (v: number)                => `${((v / TW) * 100).toFixed(3)}vw`;
 
-  let fs = maxFont;
-  while (fs > minFont && longest * fs * 0.60 > maxW) fs -= 1;
-  return fs;
+/** Approx wrap matching smartWrap() in posterExport.ts */
+function previewWrap(name: string, maxW: number): string[] {
+  const charPx = FIXED_FONT * CHAR_W;
+  if (name.length * charPx <= maxW) return [name];
+
+  const words = name.split(' ');
+  let splitIdx = words.length - 1;
+  for (let i = words.length - 1; i >= 1; i--) {
+    if (words.slice(0, i).join(' ').length * charPx <= maxW) {
+      splitIdx = i;
+      break;
+    }
+  }
+  const l1 = words.slice(0, splitIdx).join(' ') || words[0];
+  const l2 = words.slice(splitIdx).join(' ');
+  return [l1, l2];
 }
 
 interface ColumnProps {
   items: { name: string; id: string }[];
   box: Box;
   dotColor: string;
-  minFont: number;
-  maxFont: number;
 }
 
-function Column({ items, box, dotColor, minFont, maxFont }: ColumnProps) {
-  const fontPx = useMemo(
-    () => calcUniformFont(items, box, minFont, maxFont),
+function Column({ items, box, dotColor }: ColumnProps) {
+  const dotCXpx = box.x + 6 + DOT_R;
+  const textXpx = dotCXpx + DOT_R + 9;
+  const maxW    = box.x + box.w - textXpx - 6;
+
+  // Pre-compute wrapped lines for each item
+  const wrapped = useMemo(
+    () => items.map(it => previewWrap(it.name, maxW)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items.map(i => i.name).join('|'), box.w, box.h, minFont, maxFont],
+    [items.map(i => i.name).join('|'), maxW],
   );
 
   if (items.length === 0) return null;
 
-  const n       = items.length;
-  const lineH   = Math.min(box.h / n, fontPx * 2.0);  // capped, no over-spreading
-  const startY  = box.y;                               // TOP aligned — no centering
+  // Build visual rows (absolute positions in template-px from box.y)
+  type Row = { text: string; yOffset: number; hasDot: boolean };
+  const rows: Row[] = [];
+  let curY = 0;  // relative to box.y
 
-  // Geometry in template-px → convert to %/vw for CSS
-  const dotCXpx  = box.x + 6 + DOT_R;
-  const textXpx  = dotCXpx + DOT_R + 9;
+  items.forEach((item, ii) => {
+    const lines = wrapped[ii];
+    lines.forEach((line, li) => {
+      const yOffset = curY + li * LINE_H + LINE_H * 0.5;
+      rows.push({ text: line, yOffset, hasDot: li === 0 });
+    });
+    curY += lines.length * LINE_H + ITEM_GAP;
+  });
 
-  // Column wrapper at FULL box size (overflow:hidden clips excess)
+  const fontVw   = tovw(FIXED_FONT);
+  const dotVw    = tovw(DOT_R);
+  const dotLeftPct  = ((dotCXpx - DOT_R - box.x) / box.w * 100).toFixed(3);
+  const textLeftPct = ((textXpx - box.x) / box.w * 100).toFixed(3);
+  const lineHpct    = (LINE_H / TH * 100).toFixed(3);
+
   const wrapStyle: CSSProperties = {
     position: 'absolute',
     left:     pct(box.x, TW),
-    top:      pct(startY, TH),
+    top:      pct(box.y, TH),
     width:    pct(box.w, TW),
     height:   pct(box.h, TH),
     overflow: 'hidden',
   };
 
-  const lineHpct = (lineH / TH) * 100;
-  const fontVw   = vw(fontPx);
-  const dotVw    = vw(DOT_R);
-
   return (
     <div style={wrapStyle}>
-      {items.map((item, i) => {
-        const rowTop = (i * lineH / TH * 100).toFixed(3);
+      {rows.map((row, ri) => {
+        const topPct = (row.yOffset / TH * 100).toFixed(3);
 
         const rowStyle: CSSProperties = {
-          position:   'absolute',
-          top:        `${rowTop}%`,
-          left:       0,
-          right:      0,
-          height:     `${lineHpct.toFixed(3)}%`,
-          display:    'flex',
+          position: 'absolute',
+          top:      `${topPct}%`,
+          left:     0,
+          right:    0,
+          height:   `${lineHpct}%`,
+          display:  'flex',
           alignItems: 'center',
-          overflow:   'hidden',
+          overflow: 'hidden',
         };
 
-        // Dot: position relative to box left
-        const dotLeftPct = ((dotCXpx - DOT_R - box.x) / box.w * 100).toFixed(3);
         const dotStyle: CSSProperties = {
           position:     'absolute',
           left:         `${dotLeftPct}%`,
@@ -126,8 +135,6 @@ function Column({ items, box, dotColor, minFont, maxFont }: ColumnProps) {
           flexShrink:   0,
         };
 
-        // Text: starts at textXpx relative to box left
-        const textLeftPct = ((textXpx - box.x) / box.w * 100).toFixed(3);
         const textStyle: CSSProperties = {
           position:   'absolute',
           left:       `${textLeftPct}%`,
@@ -141,9 +148,9 @@ function Column({ items, box, dotColor, minFont, maxFont }: ColumnProps) {
         };
 
         return (
-          <div key={item.id} style={rowStyle}>
-            <span style={dotStyle} />
-            <span style={textStyle}>{item.name}</span>
+          <div key={ri} style={rowStyle}>
+            {row.hasDot && <span style={dotStyle} />}
+            <span style={textStyle}>{row.text}</span>
           </div>
         );
       })}
@@ -171,18 +178,11 @@ export default function PosterCanvas({
       overflow:    'hidden',
       fontFamily,
     }}>
-      {/* Template background */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/poster-template.png"
         alt="Amulya poster"
-        style={{
-          position:  'absolute',
-          inset:     0,
-          width:     '100%',
-          height:    '100%',
-          objectFit: 'fill',
-        }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
         draggable={false}
       />
 
@@ -198,7 +198,7 @@ export default function PosterCanvas({
         justifyContent: 'center',
       }}>
         <span style={{
-          fontSize:   vw(titleFS),
+          fontSize:   tovw(titleFS),
           fontWeight: 'bold',
           color:      '#7A0000',
           fontFamily,
@@ -210,19 +210,12 @@ export default function PosterCanvas({
         </span>
       </div>
 
-      {/* VEG  x=20, y=539, w=318, h=754 */}
-      <Column items={vegItems}       box={BOXES.veg}      dotColor="#1A6E1A" minFont={18} maxFont={52} />
-
-      {/* SIDES  x=355, y=555, w=295, h=408 */}
-      <Column items={accompaniments} box={BOXES.sides}    dotColor="#5C5C2E" minFont={16} maxFont={32} />
-
-      {/* DESSERTS  x=355, y=1100, w=295, h=193 */}
+      <Column items={vegItems}       box={BOXES.veg}      dotColor="#1A6E1A" />
+      <Column items={accompaniments} box={BOXES.sides}    dotColor="#5C5C2E" />
       {desserts.length > 0 && (
-        <Column items={desserts}     box={BOXES.desserts} dotColor="#A05000" minFont={16} maxFont={36} />
+        <Column items={desserts}     box={BOXES.desserts} dotColor="#A05000" />
       )}
-
-      {/* NONVEG  x=692, y=539, w=295, h=754 */}
-      <Column items={nonVegItems}    box={BOXES.nonveg}   dotColor="#8B0000" minFont={18} maxFont={52} />
+      <Column items={nonVegItems}    box={BOXES.nonveg}   dotColor="#8B0000" />
     </div>
   );
 }

@@ -90,7 +90,7 @@ function Column({ items, box, dotColor }: ColumnProps) {
   items.forEach((item, ii) => {
     const lines = wrapped[ii];
     lines.forEach((line, li) => {
-      const yOffset = curY + li * LINE_H + LINE_H * 0.5;
+      const yOffset = curY + li * LINE_H;   // TOP of line (not center)
       rows.push({ text: line, yOffset, hasDot: li === 0 });
     });
     curY += lines.length * LINE_H + ITEM_GAP;
@@ -127,25 +127,26 @@ function Column({ items, box, dotColor }: ColumnProps) {
           left:     0,
           right:    0,
           height:   `${lineHpct}%`,
-          display:  'flex',
-          alignItems: 'center',
           overflow: 'hidden',
         };
 
         const dotStyle: CSSProperties = {
           position:     'absolute',
           left:         `${dotLeftPct}%`,
+          top:          '50%',
+          transform:    'translateY(-50%)',
           width:        `calc(${dotCqw} * 2)`,
           aspectRatio:  '1',
           borderRadius: '50%',
           background:   dotColor,
-          flexShrink:   0,
         };
 
         const textStyle: CSSProperties = {
           position:   'absolute',
           left:       `${textLeftPct}%`,
           right:      '1%',
+          top:        '50%',
+          transform:  'translateY(-50%)',
           fontSize:   fontCqw,
           fontFamily: '"Book Antiqua","Palatino Linotype",Georgia,serif',
           color:      '#1A0800',

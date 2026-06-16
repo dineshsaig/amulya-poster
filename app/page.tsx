@@ -45,6 +45,16 @@ function loadDraft(): WizardDraft | null {
   }
 }
 
+// ── Step announcements for screen readers ────────────────────────────────────
+const STEP_LABELS: Record<WorkflowStep, string> = {
+  1: 'Step 1 of 6: Choose a day',
+  2: 'Step 2 of 6: Choose meal type',
+  3: 'Step 3 of 6: Select veg items',
+  4: 'Step 4 of 6: Select non-veg items',
+  5: 'Step 5 of 6: Select desserts',
+  6: 'Step 6 of 6: Your poster is ready',
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const [step, setStep] = useState<WorkflowStep>(1);
@@ -287,6 +297,11 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* Screen reader step announcements */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {STEP_LABELS[step]}
+        </div>
+
         {/* Step content */}
         <div className="min-h-[420px]">
           <AnimatePresence mode="wait" custom={directionRef.current}>
@@ -353,7 +368,7 @@ export default function HomePage() {
               )}
 
               {step === 6 && (
-                <StepPoster config={posterConfig} onBack={prevStep} />
+                <StepPoster config={posterConfig} onBack={prevStep} onReset={confirmReset} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -382,13 +397,13 @@ export default function HomePage() {
 
           <div className="max-w-lg mx-auto mt-2 text-center">
             {step === 3 && selectedVeg.length === 0 && (
-              <p className="text-xs text-stone-600">Select at least 1 veg item to continue</p>
+              <p className="text-xs text-stone-400">Select at least 1 veg item to continue</p>
             )}
             {step === 4 && selectedNonVeg.length === 0 && (
-              <p className="text-xs text-stone-600">Select at least 1 non-veg item to continue</p>
+              <p className="text-xs text-stone-400">Select at least 1 non-veg item to continue</p>
             )}
             {step === 5 && selectedDesserts.length === 0 && (
-              <p className="text-xs text-stone-600">Select at least 1 dessert to continue</p>
+              <p className="text-xs text-stone-400">Select at least 1 dessert to continue</p>
             )}
           </div>
         </div>

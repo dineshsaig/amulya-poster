@@ -55,7 +55,7 @@ export default function StepMenuSelect({
       </div>
 
       {/* TWO-COLUMN LAYOUT */}
-      <div className="grid grid-cols-2 gap-3 min-h-[500px]">
+      <div className="grid grid-cols-2 gap-3">
 
         {/* LEFT: Search + Items to Select */}
         <div className="flex flex-col space-y-2">
@@ -93,7 +93,7 @@ export default function StepMenuSelect({
           </div>
 
           {/* Items Grid - Scrollable */}
-          <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-1">
+          <div className="overflow-y-auto pr-1 -mr-1 space-y-1 max-h-[40vh] min-h-16">
             {filtered.length === 0 ? (
               <div className="text-center py-8 text-stone-400 text-xs">No items match</div>
             ) : (
@@ -123,7 +123,7 @@ export default function StepMenuSelect({
           </div>
 
           {/* Selected Items - Scrollable */}
-          <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-1 bg-stone-900/30 rounded-lg p-2 border border-amber-700/20">
+          <div className="overflow-y-auto pr-1 -mr-1 space-y-1 bg-stone-900/30 rounded-lg p-2 border border-amber-700/20 max-h-[40vh] min-h-16">
             {selectedItems.length === 0 ? (
               <div className="text-center py-8 text-stone-400 text-xs">Select items →</div>
             ) : (

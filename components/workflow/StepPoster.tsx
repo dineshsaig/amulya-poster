@@ -8,6 +8,7 @@ import { downloadPNG, downloadPDF, getPosterFilename } from '@/lib/posterExport'
 interface StepPosterProps {
   config: PosterConfig;
   onBack: () => void;
+  onReset?: () => void;
 }
 
 const FONT_OPTIONS = [
@@ -18,12 +19,13 @@ const FONT_OPTIONS = [
   { id: 'palatino',     label: 'Palatino',        value: 'Palatino Linotype' },
 ];
 
-export default function StepPoster({ config, onBack }: StepPosterProps) {
+export default function StepPoster({ config, onBack, onReset }: StepPosterProps) {
   const [downloading, setDownloading] = useState<'png' | 'pdf' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0].id);
   const [isIOS, setIsIOS] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState<'png' | 'pdf' | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -43,16 +45,18 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
   async function handleDownload(type: 'png' | 'pdf') {
     setShowSettings(false);
     setDownloading(type);
+    setDownloadError(false);
     try {
       if (type === 'png') await downloadPNG('', filename, config, currentFont);
       else                await downloadPDF('', filename, config, currentFont);
 
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
       setDownloadSuccess(type);
+      setDownloadError(false);
       successTimerRef.current = setTimeout(() => setDownloadSuccess(null), 3500);
     } catch (err) {
       console.error('Download failed:', err);
-      alert('Download failed. Please try again.');
+      setDownloadError(true);
     } finally {
       setDownloading(null);
     }
@@ -104,7 +108,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
                   <span style={{ fontFamily: font.value }}>{font.label}</span>
                   {selectedFont === font.id && <span className="text-amber-400 text-xs">✓</span>}
                 </div>
-                <div className="text-[10px] opacity-50 mt-0.5" style={{ fontFamily: font.value }}>
+                <div className="text-xs opacity-75 mt-1" style={{ fontFamily: font.value }}>
                   Tomato Dal · Gulab Jamun · Apollo Fish
                 </div>
               </button>
@@ -126,13 +130,13 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
 
       {/* Download success notification */}
       {downloadSuccess && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-900/20 border border-emerald-700/30">
+        <div role="status" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-900/20 border border-emerald-700/30">
           <div className="w-7 h-7 rounded-full bg-emerald-800/50 flex items-center justify-center flex-shrink-0">
             <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-emerald-300">
               {downloadSuccess === 'png' ? 'PNG ready' : 'PDF ready'}
             </p>
@@ -146,6 +150,36 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
                   : 'Saved to Downloads — ready to print'}
             </p>
           </div>
+          {onReset && (
+            <button
+              onClick={onReset}
+              className="flex-shrink-0 text-xs text-stone-400 hover:text-stone-200 underline underline-offset-2 cursor-pointer"
+            >
+              Make another
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Download error notification */}
+      {downloadError && (
+        <div role="alert" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-900/20 border border-rose-700/30">
+          <div className="w-7 h-7 rounded-full bg-rose-800/50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-rose-300">Download failed</p>
+            <p className="text-xs text-stone-400 mt-0.5">Check your connection and try again.</p>
+          </div>
+          <button
+            onClick={() => setDownloadError(false)}
+            className="flex-shrink-0 text-xs text-stone-500 hover:text-stone-300 cursor-pointer"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
         </div>
       )}
 

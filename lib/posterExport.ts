@@ -13,10 +13,10 @@ import { PosterConfig } from '@/types';
  *  PIXEL-ACCURATE BOXES  (1024 × 1819 template, scanned)
  * ═══════════════════════════════════════════════════════════════
  *  TITLE:    x=30,  y=252, w=964, h=175
- *  VEG:      x=20,  y=539, w=318, h=754   right=338
+ *  VEG:      x=20,  y=539, w=318, h=690   right=338
  *  SIDES:    x=355, y=555, w=295, h=408   right=650
- *  DESSERTS: x=355, y=1100,w=295, h=193   right=650
- *  NONVEG:   x=692, y=539, w=295, h=754   right=987
+ *  DESSERTS: x=355, y=1100,w=295, h=130   right=650
+ *  NONVEG:   x=692, y=539, w=295, h=690   right=987
  *
  * ═══════════════════════════════════════════════════════════════
  *  TYPOGRAPHY RULES
@@ -41,7 +41,7 @@ const BOXES = {
   title:    { x:  30, y: 252, w: 964, h: 175 },
   veg:      { x:  20, y: 539, w: 318, h: 690 },   // h trimmed to match column border bottom
   sides:    { x: 355, y: 555, w: 295, h: 408 },
-  desserts: { x: 355, y:1000, w: 295, h: 210 },   // moved up to center-column space below sides
+  desserts: { x: 355, y:1100, w: 295, h: 130 },   // center-column, just above ornate Desserts label
   nonveg:   { x: 692, y: 539, w: 295, h: 690 },   // h trimmed to match column border bottom
 } as const;
 

@@ -2,12 +2,12 @@ import jsPDF from 'jspdf';
 import { PosterConfig } from '@/types';
 
 /*
- * posterExport.ts — v23  FIXED-FONT + SMART WRAP
+ * posterExport.ts — v24  AUTO-SHRINK PER COLUMN
  *
- * All columns (Veg, NonVeg, Sides, Desserts) use the SAME fixed
- * font size. Long names wrap to a second line at a word boundary
- * instead of shrinking the font. This produces a clean, consistent
- * look across the whole poster.
+ * Each column independently calculates the largest font size where all
+ * its items fit within the column box height (with wrapping allowed).
+ * Font steps down from MAX_FONT (28px) to MIN_FONT (18px) until the
+ * total content height fits — then uses that size for the whole column.
  *
  * ═══════════════════════════════════════════════════════════════
  *  PIXEL-ACCURATE BOXES  (1024 × 1819 template, scanned)
@@ -17,32 +17,24 @@ import { PosterConfig } from '@/types';
  *  SIDES:    x=355, y=555, w=295, h=408   right=650
  *  DESSERTS: x=355, y=1100,w=295, h=130   right=650
  *  NONVEG:   x=692, y=539, w=295, h=690   right=987
- *
- * ═══════════════════════════════════════════════════════════════
- *  TYPOGRAPHY RULES
- * ═══════════════════════════════════════════════════════════════
- *  FIXED_FONT = 28px  (same for every column)
- *  LINE_H     = 38px  (per visual line — tight, readable)
- *  ITEM_GAP   = 5px   (extra space between items, not between wrapped lines)
- *  WRAP: if name > maxW → split at last word boundary before overflow
- *        max 2 lines; line 2 indented to text_x (no bullet on line 2)
  */
 
 const W = 1024;
 const H = 1819;
 
 // ── Layout constants ────────────────────────────────────────────
-const FIXED_FONT = 28;   // px — same for ALL columns
-const LINE_H     = 38;   // px per visual line
-const ITEM_GAP   =  5;   // px between consecutive items
+const MAX_FONT   = 28;   // px — starting font size per column
+const MIN_FONT   = 18;   // px — smallest allowed (still legible at print)
+const LINE_RATIO = 38 / 28;  // LINE_H / FIXED_FONT — kept proportional as font scales
+const ITEM_GAP   =  5;   // px between items (not between wrapped lines)
 const DOT_R      =  7;   // px bullet radius
 
 const BOXES = {
   title:    { x:  30, y: 252, w: 964, h: 175 },
-  veg:      { x:  20, y: 539, w: 318, h: 690 },   // h trimmed to match column border bottom
+  veg:      { x:  20, y: 539, w: 318, h: 690 },
   sides:    { x: 355, y: 555, w: 295, h: 408 },
-  desserts: { x: 355, y:1100, w: 295, h: 130 },   // center-column, just above ornate Desserts label
-  nonveg:   { x: 692, y: 539, w: 295, h: 690 },   // h trimmed to match column border bottom
+  desserts: { x: 355, y:1100, w: 295, h: 130 },
+  nonveg:   { x: 692, y: 539, w: 295, h: 690 },
 } as const;
 
 function fontStack(size: number, bold = false): string {
@@ -71,9 +63,8 @@ function smartWrap(
 ): [string] | [string, string] {
   if (ctx.measureText(name).width <= maxW) return [name];
 
-  // Find the best split point — last space where line 1 fits
   const words = name.split(' ');
-  let splitIdx = words.length - 1;           // default: all but last word
+  let splitIdx = words.length - 1;
 
   for (let i = words.length - 1; i >= 1; i--) {
     const candidate = words.slice(0, i).join(' ');
@@ -86,7 +77,6 @@ function smartWrap(
   const line1 = words.slice(0, splitIdx).join(' ') || words[0];
   let   line2 = words.slice(splitIdx).join(' ');
 
-  // Truncate line 2 if it still overflows
   while (line2.length > 1 && ctx.measureText(line2).width > maxW) {
     line2 = line2.slice(0, -1).trimEnd();
   }
@@ -96,14 +86,48 @@ function smartWrap(
 }
 
 /**
- * Draw a column of items with FIXED font, smart word-wrap, and
- * top-aligned layout with natural item spacing.
+ * Find the largest font size (MAX_FONT → MIN_FONT) where all items
+ * fit within box.h using measureText-accurate wrapping.
+ * Returns the font size and the proportionally scaled line height.
+ */
+function computeColumnFont(
+  ctx: CanvasRenderingContext2D,
+  items: { name: string }[],
+  box: { x: number; y: number; w: number; h: number },
+): { fontSize: number; lineH: number } {
+  if (items.length === 0) return { fontSize: MAX_FONT, lineH: Math.ceil(MAX_FONT * LINE_RATIO) };
+
+  const dotCX = box.x + 6 + DOT_R;
+  const textX = dotCX + DOT_R + 9;
+  const maxW  = box.x + box.w - textX - 6;
+
+  for (let fs = MAX_FONT; fs >= MIN_FONT; fs--) {
+    ctx.font = fontStack(fs);
+    const lh = Math.ceil(fs * LINE_RATIO);
+
+    // Total height = sum of (lineCount × lh) + (n−1) × ITEM_GAP
+    let totalH = -ITEM_GAP;
+    for (const item of items) {
+      const lines = smartWrap(ctx, item.name, maxW);
+      totalH += lines.length * lh + ITEM_GAP;
+    }
+
+    if (totalH <= box.h) return { fontSize: fs, lineH: lh };
+  }
+
+  return { fontSize: MIN_FONT, lineH: Math.ceil(MIN_FONT * LINE_RATIO) };
+}
+
+/**
+ * Draw a column of items using the pre-computed font size and line height.
  */
 function drawItems(
   ctx: CanvasRenderingContext2D,
   items: { name: string }[],
   box: { x: number; y: number; w: number; h: number },
   dotColor: string,
+  fontSize: number,
+  lineH: number,
 ) {
   if (items.length === 0) return;
 
@@ -111,23 +135,22 @@ function drawItems(
   const textX = dotCX + DOT_R + 9;
   const maxW  = box.x + box.w - textX - 6;
 
-  ctx.font         = fontStack(FIXED_FONT);
+  ctx.font         = fontStack(fontSize);
   ctx.textBaseline = 'middle';
 
-  let curY = box.y;   // current draw position — top-aligned
+  let curY = box.y;
 
   items.forEach((item) => {
     const lines = smartWrap(ctx, item.name, maxW);
-    const itemH = lines.length * LINE_H;
+    const itemH = lines.length * lineH;
 
     // Safety: don't draw past the bottom of the box
     if (curY + itemH > box.y + box.h) return;
 
     lines.forEach((line, li) => {
-      const cy = curY + li * LINE_H + LINE_H * 0.5;
+      const cy = curY + li * lineH + lineH * 0.5;
 
       if (li === 0) {
-        // Bullet dot on first line only
         ctx.beginPath();
         ctx.arc(dotCX, cy, DOT_R, 0, Math.PI * 2);
         ctx.fillStyle = dotColor;
@@ -174,14 +197,17 @@ export async function generatePosterCanvas(
 
   ctx.drawImage(templateImg, 0, 0, W, H);
 
-  // Draw all sections — same font everywhere
-  ctx.font = fontStack(FIXED_FONT);
+  // Per-column font sizes — each column uses the largest font that fits all its items
+  const vegCol      = computeColumnFont(ctx, vegItems,       BOXES.veg);
+  const sidesCol    = computeColumnFont(ctx, accompaniments, BOXES.sides);
+  const dessertsCol = computeColumnFont(ctx, desserts,       BOXES.desserts);
+  const nonvegCol   = computeColumnFont(ctx, nonVegItems,    BOXES.nonveg);
 
   drawTitle(ctx, `${day} ${mealType} Buffet`, BOXES.title);
-  drawItems(ctx, vegItems,       BOXES.veg,      '#1A6E1A');
-  drawItems(ctx, accompaniments, BOXES.sides,    '#5C5C2E');
-  drawItems(ctx, desserts,       BOXES.desserts, '#A05000');
-  drawItems(ctx, nonVegItems,    BOXES.nonveg,   '#8B0000');
+  drawItems(ctx, vegItems,       BOXES.veg,      '#1A6E1A', vegCol.fontSize,      vegCol.lineH);
+  drawItems(ctx, accompaniments, BOXES.sides,    '#5C5C2E', sidesCol.fontSize,    sidesCol.lineH);
+  drawItems(ctx, desserts,       BOXES.desserts, '#A05000', dessertsCol.fontSize, dessertsCol.lineH);
+  drawItems(ctx, nonVegItems,    BOXES.nonveg,   '#8B0000', nonvegCol.fontSize,   nonvegCol.lineH);
 
   return canvas;
 }
@@ -207,8 +233,6 @@ export async function downloadPNG(
     return;
   }
 
-  // iOS does not support <a download>. Open a new tab BEFORE any await so the
-  // browser doesn't treat window.open() as an unsolicited popup and block it.
   const tab = window.open('', '_blank');
   if (!tab) {
     alert('Allow pop-ups for this site, then tap Download PNG again.');
@@ -242,8 +266,6 @@ export async function downloadPDF(
 ): Promise<void> {
   if (!config) throw new Error('Config required');
 
-  // On iOS, jsPDF.save() also uses <a download> which is unsupported.
-  // Open the tab before any await to keep the user-gesture context.
   const ios = isIOSDevice();
   const tab = ios ? window.open('', '_blank') : null;
   if (ios && !tab) {

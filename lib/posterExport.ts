@@ -39,10 +39,10 @@ const DOT_R      =  7;   // px bullet radius
 
 const BOXES = {
   title:    { x:  30, y: 252, w: 964, h: 175 },
-  veg:      { x:  20, y: 539, w: 318, h: 754 },
+  veg:      { x:  20, y: 539, w: 318, h: 690 },   // h trimmed to match column border bottom
   sides:    { x: 355, y: 555, w: 295, h: 408 },
-  desserts: { x: 355, y:1100, w: 295, h: 193 },
-  nonveg:   { x: 692, y: 539, w: 295, h: 754 },
+  desserts: { x: 355, y:1000, w: 295, h: 210 },   // moved up to center-column space below sides
+  nonveg:   { x: 692, y: 539, w: 295, h: 690 },   // h trimmed to match column border bottom
 } as const;
 
 function fontStack(size: number, bold = false): string {

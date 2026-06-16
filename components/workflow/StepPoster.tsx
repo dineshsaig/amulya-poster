@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PosterConfig } from '@/types';
 import PosterCanvas from '@/components/poster/PosterCanvas';
 import Button from '@/components/ui/Button';
@@ -22,10 +22,18 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
   const [downloading, setDownloading] = useState<'png' | 'pdf' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0].id);
+  const [isIOS, setIsIOS] = useState(false);
 
-  const filename   = getPosterFilename(config.day, config.mealType);
+  useEffect(() => {
+    setIsIOS(
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+  }, []);
+
+  const filename    = getPosterFilename(config.day, config.mealType);
   const currentFont = FONT_OPTIONS.find(f => f.id === selectedFont)?.value ?? FONT_OPTIONS[0].value;
-  const totalItems = config.vegItems.length + config.nonVegItems.length + config.desserts.length;
+  const totalItems  = config.vegItems.length + config.nonVegItems.length + config.desserts.length;
 
   async function handleDownload(type: 'png' | 'pdf') {
     setShowSettings(false);
@@ -40,9 +48,6 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
       setDownloading(null);
     }
   }
-
-  const PREVIEW_SCALE = 0.25;
-  const PREVIEW_HEIGHT = Math.round(1819 * PREVIEW_SCALE);
 
   return (
     <div className="space-y-4">
@@ -99,13 +104,16 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         </div>
       )}
 
-      {/* Preview — CSS scaled for display only */}
-      <div className="flex justify-center overflow-hidden rounded-lg border border-stone-700/20"
-        style={{ height: PREVIEW_HEIGHT }}>
-        <div style={{ transform: `scale(${PREVIEW_SCALE})`, transformOrigin: 'top center', width: 1024, flexShrink: 0 }}>
-          <PosterCanvas config={config} fontFamily={`"${currentFont}", Georgia, serif`} />
-        </div>
+      {/* Preview — natural width, scrollable so you can inspect the full poster */}
+      <div
+        className="overflow-y-auto overflow-x-hidden rounded-lg border border-stone-700/30"
+        style={{ maxHeight: '56vh' }}
+      >
+        <PosterCanvas config={config} fontFamily={`"${currentFont}", Georgia, serif`} />
       </div>
+      <p className="text-center text-xs text-stone-600 -mt-1">
+        Scroll to preview · download matches exactly
+      </p>
 
       {/* Download buttons */}
       <div className="space-y-2.5">
@@ -117,6 +125,11 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
           </svg>
           Download PNG for WhatsApp
         </Button>
+        {isIOS && (
+          <p className="text-xs text-stone-500 text-center -mt-1">
+            On iPhone/iPad: image opens in a new tab — long-press it and tap <strong className="text-stone-400">Save to Photos</strong>
+          </p>
+        )}
         <Button variant="secondary" size="lg" className="w-full"
           loading={downloading === 'pdf'} onClick={() => handleDownload('pdf')}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

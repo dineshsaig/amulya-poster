@@ -27,7 +27,7 @@ const DOT_R      =  7;    // px bullet radius
 
 // Book Antiqua glyph width ≈ 0.60× font-size per character
 // (used only for preview width estimation; canvas uses measureText)
-const CHAR_W     = 0.60;
+const CHAR_W = 0.60;
 
 interface Box { x: number; y: number; w: number; h: number }
 
@@ -39,8 +39,10 @@ const BOXES: Record<string, Box> = {
   nonveg:   { x: 692, y: 539, w: 295, h: 754 },
 };
 
-const pct  = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
-const tovw = (v: number)                => `${((v / TW) * 100).toFixed(3)}vw`;
+const pct   = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
+// cqw (container query width) scales fonts relative to the PosterCanvas container
+// width, not the viewport — correct in scaled containers and all screen sizes.
+const tocqw = (v: number)               => `${((v / TW) * 100).toFixed(3)}cqw`;
 
 /** Approx wrap matching smartWrap() in posterExport.ts */
 function previewWrap(name: string, maxW: number): string[] {
@@ -94,11 +96,14 @@ function Column({ items, box, dotColor }: ColumnProps) {
     curY += lines.length * LINE_H + ITEM_GAP;
   });
 
-  const fontVw   = tovw(FIXED_FONT);
-  const dotVw    = tovw(DOT_R);
+  const fontCqw     = tocqw(FIXED_FONT);
+  const dotCqw      = tocqw(DOT_R);
   const dotLeftPct  = ((dotCXpx - DOT_R - box.x) / box.w * 100).toFixed(3);
   const textLeftPct = ((textXpx - box.x) / box.w * 100).toFixed(3);
-  const lineHpct    = (LINE_H / TH * 100).toFixed(3);
+  // lineHpct and topPct must be relative to box.h (the wrapper height),
+  // not TH (the template height). top: N% on an abs-positioned child is N%
+  // of the containing block's height — which is the column wrapper, not the template.
+  const lineHpct    = (LINE_H / box.h * 100).toFixed(3);
 
   const wrapStyle: CSSProperties = {
     position: 'absolute',
@@ -112,7 +117,9 @@ function Column({ items, box, dotColor }: ColumnProps) {
   return (
     <div style={wrapStyle}>
       {rows.map((row, ri) => {
-        const topPct = (row.yOffset / TH * 100).toFixed(3);
+        // topPct: relative to column wrapper height (box.h), not template height (TH).
+        // top: N% on an abs-positioned child resolves against the containing block height.
+        const topPct = (row.yOffset / box.h * 100).toFixed(3);
 
         const rowStyle: CSSProperties = {
           position: 'absolute',
@@ -128,7 +135,7 @@ function Column({ items, box, dotColor }: ColumnProps) {
         const dotStyle: CSSProperties = {
           position:     'absolute',
           left:         `${dotLeftPct}%`,
-          width:        `calc(${dotVw} * 2)`,
+          width:        `calc(${dotCqw} * 2)`,
           aspectRatio:  '1',
           borderRadius: '50%',
           background:   dotColor,
@@ -139,7 +146,7 @@ function Column({ items, box, dotColor }: ColumnProps) {
           position:   'absolute',
           left:       `${textLeftPct}%`,
           right:      '1%',
-          fontSize:   fontVw,
+          fontSize:   fontCqw,
           fontFamily: '"Book Antiqua","Palatino Linotype",Georgia,serif',
           color:      '#1A0800',
           lineHeight: 1,
@@ -172,11 +179,12 @@ export default function PosterCanvas({
 
   return (
     <div style={{
-      position:    'relative',
-      width:       '100%',
-      aspectRatio: `${TW} / ${TH}`,
-      overflow:    'hidden',
+      position:      'relative',
+      width:         '100%',
+      aspectRatio:   `${TW} / ${TH}`,
+      overflow:      'hidden',
       fontFamily,
+      containerType: 'inline-size',  // makes cqw resolve to this element's width
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -198,7 +206,7 @@ export default function PosterCanvas({
         justifyContent: 'center',
       }}>
         <span style={{
-          fontSize:   tovw(titleFS),
+          fontSize:   tocqw(titleFS),
           fontWeight: 'bold',
           color:      '#7A0000',
           fontFamily,

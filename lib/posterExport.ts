@@ -186,16 +186,54 @@ export async function generatePosterCanvas(
   return canvas;
 }
 
+function isIOSDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 export async function downloadPNG(
   _id: string, filename: string,
   config?: PosterConfig, fontName?: string,
 ): Promise<void> {
   if (!config) throw new Error('Config required');
-  const canvas = await generatePosterCanvas(config, fontName);
-  const link   = document.createElement('a');
-  link.download = `${filename}.png`;
-  link.href     = canvas.toDataURL('image/png', 1.0);
-  link.click();
+
+  if (!isIOSDevice()) {
+    const canvas = await generatePosterCanvas(config, fontName);
+    const link   = document.createElement('a');
+    link.download = `${filename}.png`;
+    link.href     = canvas.toDataURL('image/png', 1.0);
+    link.click();
+    return;
+  }
+
+  // iOS does not support <a download>. Open a new tab BEFORE any await so the
+  // browser doesn't treat window.open() as an unsolicited popup and block it.
+  const tab = window.open('', '_blank');
+  if (!tab) {
+    alert('Allow pop-ups for this site, then tap Download PNG again.');
+    return;
+  }
+
+  const canvas  = await generatePosterCanvas(config, fontName);
+  const dataUrl = canvas.toDataURL('image/png', 1.0);
+
+  tab.document.write(
+    `<!DOCTYPE html><html><head>` +
+    `<title>${filename}</title>` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<style>` +
+    `body{margin:0;background:#111;display:flex;flex-direction:column;align-items:center;padding:16px;font-family:-apple-system,sans-serif}` +
+    `.tip{color:#fff;font-size:14px;text-align:center;background:rgba(255,200,0,.15);` +
+    `border:1px solid rgba(255,200,0,.35);border-radius:10px;padding:10px 14px;` +
+    `margin-bottom:14px;max-width:360px;line-height:1.5}` +
+    `img{max-width:100%;height:auto;border-radius:8px}` +
+    `</style></head><body>` +
+    `<div class="tip">Long-press the image below and tap <strong>Save to Photos</strong> to save it.</div>` +
+    `<img src="${dataUrl}" alt="${filename}"/>` +
+    `</body></html>`
+  );
+  tab.document.close();
 }
 
 export async function downloadPDF(
@@ -203,13 +241,36 @@ export async function downloadPDF(
   config?: PosterConfig, fontName?: string,
 ): Promise<void> {
   if (!config) throw new Error('Config required');
+
+  // On iOS, jsPDF.save() also uses <a download> which is unsupported.
+  // Open the tab before any await to keep the user-gesture context.
+  const ios = isIOSDevice();
+  const tab = ios ? window.open('', '_blank') : null;
+  if (ios && !tab) {
+    alert('Allow pop-ups for this site, then tap Download PDF again.');
+    return;
+  }
+
   const canvas  = await generatePosterCanvas(config, fontName);
   const imgData = canvas.toDataURL('image/png', 1.0);
   const pdfW    = 148;
   const pdfH    = (canvas.height / canvas.width) * pdfW;
   const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pdfW, pdfH] });
   pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
-  pdf.save(`${filename}.pdf`);
+
+  if (ios && tab) {
+    const pdfDataUrl = pdf.output('datauristring');
+    tab.document.write(
+      `<!DOCTYPE html><html><head>` +
+      `<title>${filename}</title>` +
+      `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+      `<style>body{margin:0;height:100vh}iframe{width:100%;height:100%;border:none}</style>` +
+      `</head><body><iframe src="${pdfDataUrl}"></iframe></body></html>`
+    );
+    tab.document.close();
+  } else {
+    pdf.save(`${filename}.pdf`);
+  }
 }
 
 export function getPosterFilename(day: string, mealType: string): string {

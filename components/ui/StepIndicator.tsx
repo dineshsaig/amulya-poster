@@ -11,8 +11,8 @@ const STEPS = [
   { label: 'Day' },
   { label: 'Meal' },
   { label: 'Veg' },
-  { label: 'Non-Veg' },
-  { label: 'Desserts' },
+  { label: 'N.Veg' },
+  { label: 'Sweet' },
   { label: 'Poster' },
 ];
 
@@ -47,7 +47,7 @@ export default function StepIndicator({ currentStep, totalSteps }: StepIndicator
                     stepNum
                   )}
                 </div>
-                <span className={`text-[9px] font-medium tracking-wide ${
+                <span className={`text-[10px] font-medium ${
                   isCurrent ? 'text-amber-400' : isCompleted ? 'text-amber-600' : 'text-stone-600'
                 }`}>
                   {step.label}

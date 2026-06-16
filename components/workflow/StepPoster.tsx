@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PosterConfig } from '@/types';
 import PosterCanvas from '@/components/poster/PosterCanvas';
 import Button from '@/components/ui/Button';
@@ -23,12 +23,17 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0].id);
   const [isIOS, setIsIOS] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState<'png' | 'pdf' | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setIsIOS(
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
     );
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
   }, []);
 
   const filename    = getPosterFilename(config.day, config.mealType);
@@ -41,6 +46,10 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
     try {
       if (type === 'png') await downloadPNG('', filename, config, currentFont);
       else                await downloadPDF('', filename, config, currentFont);
+
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      setDownloadSuccess(type);
+      successTimerRef.current = setTimeout(() => setDownloadSuccess(null), 3500);
     } catch (err) {
       console.error('Download failed:', err);
       alert('Download failed. Please try again.');
@@ -81,7 +90,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
       {/* Settings */}
       {showSettings && (
         <div className="bg-stone-900/60 rounded-xl p-4 border border-amber-700/20 space-y-3">
-          <div className="text-[10px] text-amber-600 uppercase tracking-widest font-semibold">Font Style</div>
+          <p className="text-xs font-semibold text-stone-400">Font Style</p>
           <div className="space-y-1.5">
             {FONT_OPTIONS.map(font => (
               <button key={font.id} onClick={() => setSelectedFont(font.id)}
@@ -104,7 +113,7 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
         </div>
       )}
 
-      {/* Preview — natural width, scrollable so you can inspect the full poster */}
+      {/* Preview */}
       <div
         className="overflow-y-auto overflow-x-hidden rounded-lg border border-stone-700/30"
         style={{ maxHeight: '56vh' }}
@@ -114,6 +123,31 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
       <p className="text-center text-xs text-stone-600 -mt-1">
         Scroll to preview · download matches exactly
       </p>
+
+      {/* Download success notification */}
+      {downloadSuccess && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-900/20 border border-emerald-700/30">
+          <div className="w-7 h-7 rounded-full bg-emerald-800/50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-emerald-300">
+              {downloadSuccess === 'png' ? 'PNG ready' : 'PDF ready'}
+            </p>
+            <p className="text-xs text-stone-400 mt-0.5">
+              {downloadSuccess === 'png'
+                ? isIOS
+                  ? 'New tab opened — long-press the image to save'
+                  : 'Saved to Downloads — share to WhatsApp'
+                : isIOS
+                  ? 'New tab opened — PDF is ready to view'
+                  : 'Saved to Downloads — ready to print'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Download buttons */}
       <div className="space-y-2.5">
@@ -142,23 +176,23 @@ export default function StepPoster({ config, onBack }: StepPosterProps) {
 
       {/* Summary */}
       <div className="bg-stone-900/40 rounded-xl p-4 border border-stone-700/30 space-y-3">
-        <div className="text-[10px] text-amber-600 uppercase tracking-widest font-semibold">Summary</div>
+        <p className="text-xs font-semibold text-stone-400">Summary</p>
         {config.vegItems.length > 0 && (
           <div>
-            <div className="text-[10px] text-emerald-500 uppercase tracking-wide mb-1">🌿 Veg ({config.vegItems.length})</div>
-            <div className="text-xs text-stone-400 leading-relaxed">{config.vegItems.map(i => i.name).join(' · ')}</div>
+            <p className="text-xs text-emerald-500 font-medium mb-1">🌿 Veg ({config.vegItems.length})</p>
+            <p className="text-xs text-stone-400 leading-relaxed">{config.vegItems.map(i => i.name).join(' · ')}</p>
           </div>
         )}
         {config.nonVegItems.length > 0 && (
           <div>
-            <div className="text-[10px] text-red-400 uppercase tracking-wide mb-1">🍗 Non-Veg ({config.nonVegItems.length})</div>
-            <div className="text-xs text-stone-400 leading-relaxed">{config.nonVegItems.map(i => i.name).join(' · ')}</div>
+            <p className="text-xs text-red-400 font-medium mb-1">🍗 Non-Veg ({config.nonVegItems.length})</p>
+            <p className="text-xs text-stone-400 leading-relaxed">{config.nonVegItems.map(i => i.name).join(' · ')}</p>
           </div>
         )}
         {config.desserts.length > 0 && (
           <div>
-            <div className="text-[10px] text-pink-400 uppercase tracking-wide mb-1">🍮 Desserts ({config.desserts.length})</div>
-            <div className="text-xs text-stone-400">{config.desserts.map(i => i.name).join(' · ')}</div>
+            <p className="text-xs text-pink-400 font-medium mb-1">🍮 Desserts ({config.desserts.length})</p>
+            <p className="text-xs text-stone-400">{config.desserts.map(i => i.name).join(' · ')}</p>
           </div>
         )}
       </div>

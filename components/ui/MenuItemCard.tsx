@@ -20,10 +20,13 @@ export default function MenuItemCard({ item, selected, onToggle }: MenuItemCardP
 
   return (
     <button
+      role="checkbox"
+      aria-checked={selected}
       onClick={() => onToggle(item)}
       className={`
         relative w-full text-left px-4 py-3 rounded-xl border transition-all duration-200 cursor-pointer
         active:scale-95 select-none
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-1 focus-visible:ring-offset-stone-900
         ${selected
           ? `${colors.bg} border-amber-500/60 ring-1 ${colors.ring} ring-opacity-40 shadow-md`
           : 'bg-stone-800/50 border-stone-700/50 hover:border-amber-600/30 hover:bg-stone-800'

@@ -1,105 +1,93 @@
 'use client';
 /**
- * PosterCanvas.tsx — v25  AUTO-SHRINK PER COLUMN (preview)
+ * PosterCanvas.tsx — v27  CREAM TEMPLATE
  *
- * Mirrors the auto-shrink logic in posterExport.ts v24.
- * Each column computes the largest font size where all items fit within
- * its box height (using CHAR_W approximation since measureText isn't
- * available in React). CSS overflow-wrap handles any residual wrapping.
+ * Mirrors posterExport.ts v26 exactly.
+ *
+ * Template PNG has logo, borders, "VEG ITEMS / ACCOMPANIMENTS / NON-VEG ITEMS"
+ * column headers, food photos, and address all baked in.
+ *
+ * This component overlays:
+ *   1. Title  — "Tuesday Lunch Buffet" in the gap between logo and column headers
+ *   2. Columns — veg (left) · sides (center top) · desserts (center bottom) · nonveg (right)
  *
  * BOX MAP (1024 × 1819):
- *   TITLE:    x=30,  y=252, w=964, h=175
- *   VEG:      x=20,  y=539, w=318, h=690
- *   SIDES:    x=355, y=555, w=295, h=408
- *   DESSERTS: x=355, y=1100,w=295, h=130
- *   NONVEG:   x=692, y=539, w=295, h=690
+ *   TITLE:    x=30,  y=310,  w=964, h=170
+ *   VEG:      x=10,  y=634,  w=330, h=588
+ *   SIDES:    x=346, y=634,  w=330, h=395
+ *   DESSERTS: x=346, y=1046, w=330, h=170
+ *   NONVEG:   x=686, y=634,  w=330, h=588
  */
 
-import React, { useMemo, CSSProperties } from 'react';
+import { useMemo, CSSProperties } from 'react';
 import { PosterConfig } from '@/types';
 
-// ── Constants mirror posterExport.ts exactly ────────────────────
-const TW         = 1024;
-const TH         = 1819;
-const MAX_FONT   = 28;         // px — starting size per column
-const MIN_FONT   = 18;         // px — smallest allowed
-const LINE_RATIO = 38 / 28;   // proportional line height (1.357)
-const ITEM_GAP   =  5;         // px between items
-const DOT_R      =  7;         // px bullet radius
-
-// Conservative Book Antiqua width estimate — slightly over-estimates
-// to match canvas measureText behaviour (avoids under-wrapping).
-const CHAR_W = 0.62;
+const TW             = 1024;
+const TH             = 1819;
+const VEG_NONVEG_MAX = 30;
+const VEG_NONVEG_MIN = 22;
+const SIDES_DES_MAX  = 32;
+const SIDES_DES_MIN  = 24;
+const LINE_RATIO     = 38 / 28;
+const ITEM_GAP       =  5;
+const DOT_R          =  7;
+const CHAR_W         = 0.57; // Patrick Hand average char width ratio
 
 interface Box { x: number; y: number; w: number; h: number }
 
 const BOXES: Record<string, Box> = {
-  title:    { x:  30, y: 252, w: 964, h: 175 },
-  veg:      { x:  20, y: 539, w: 318, h: 690 },
-  sides:    { x: 355, y: 555, w: 295, h: 408 },
-  desserts: { x: 355, y:1100, w: 295, h: 130 },
-  nonveg:   { x: 692, y: 539, w: 295, h: 690 },
+  title:    { x:  30, y: 280,  w: 964, h: 170 },
+  veg:      { x:  40, y: 590,  w: 300, h: 588 },
+  sides:    { x: 360, y: 590,  w: 330, h: 415 },
+  desserts: { x: 380, y: 1269, w: 330, h: 135 },
+  nonveg:   { x: 700, y: 590,  w: 330, h: 588 },
 };
 
 const pct   = (v: number, total: number) => `${((v / total) * 100).toFixed(3)}%`;
 const tocqw = (v: number)               => `${((v / TW) * 100).toFixed(3)}cqw`;
 
-/**
- * Estimate the largest font size (MAX_FONT → MIN_FONT) where all items
- * fit within box.h using CHAR_W character width approximation.
- */
 function computePreviewFont(
   items: { name: string }[],
   box: Box,
+  maxFont: number,
+  minFont: number,
 ): { fontSize: number; lineH: number } {
-  if (items.length === 0) {
-    return { fontSize: MAX_FONT, lineH: Math.ceil(MAX_FONT * LINE_RATIO) };
-  }
-
-  // Text starts at 29px from the left edge of the box (dot area included)
-  const textX = 6 + DOT_R + DOT_R + 9;  // = 29px from box left
+  if (items.length === 0) return { fontSize: maxFont, lineH: Math.ceil(maxFont * LINE_RATIO) };
+  const textX = 6 + DOT_R + DOT_R + 9;
   const maxW  = box.w - textX - 6;
-
-  for (let fs = MAX_FONT; fs >= MIN_FONT; fs--) {
+  for (let fs = maxFont; fs >= minFont; fs--) {
     const lh     = Math.ceil(fs * LINE_RATIO);
     const charPx = fs * CHAR_W;
-
-    let totalH = -ITEM_GAP;
+    let totalH   = -ITEM_GAP;
     for (const item of items) {
-      // Estimate line count: 1 if fits single line, 2 if wraps
-      const lineCount = item.name.length * charPx <= maxW ? 1 : 2;
-      totalH += lineCount * lh + ITEM_GAP;
+      totalH += (item.name.length * charPx <= maxW ? 1 : 2) * lh + ITEM_GAP;
     }
-
     if (totalH <= box.h) return { fontSize: fs, lineH: lh };
   }
-
-  return { fontSize: MIN_FONT, lineH: Math.ceil(MIN_FONT * LINE_RATIO) };
+  return { fontSize: minFont, lineH: Math.ceil(minFont * LINE_RATIO) };
 }
 
-interface ColumnProps {
+function Column({ items, box, dotColor, maxFont, minFont }: {
   items: { name: string; id: string }[];
   box: Box;
   dotColor: string;
-}
-
-function Column({ items, box, dotColor }: ColumnProps) {
+  maxFont: number;
+  minFont: number;
+}) {
   if (items.length === 0) return null;
-
+  const itemKey = items.map(i => i.name).join('|');
   const { fontSize, lineH } = useMemo(
-    () => computePreviewFont(items, box),
+    () => computePreviewFont(items, box, maxFont, minFont),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items.map(i => i.name).join('|'), box.w, box.h],
+    [itemKey, box.w, box.h, maxFont, minFont],
   );
-
-  const fontCqw    = tocqw(fontSize);
-  const lineHRatio = (lineH / fontSize).toFixed(3);
-  const dotDiamC   = tocqw(DOT_R * 2);
-  // Center dot vertically on the first text line
-  const dotMTopC   = tocqw((lineH - DOT_R * 2) / 2);
-  const gapC       = tocqw(9);
-  const itemGapC   = tocqw(ITEM_GAP);
-  const padLeftC   = tocqw(6);
+  const fontCqw  = tocqw(fontSize);
+  const lhRatio  = (lineH / fontSize).toFixed(3);
+  const dotDiamC = tocqw(DOT_R * 2);
+  const dotMTopC = tocqw((lineH - DOT_R * 2) / 2);
+  const gapC     = tocqw(9);
+  const itemGapC = tocqw(ITEM_GAP);
+  const padLeftC = tocqw(6);
 
   return (
     <div style={{
@@ -119,7 +107,6 @@ function Column({ items, box, dotColor }: ColumnProps) {
           gap:          gapC,
           marginBottom: itemGapC,
         }}>
-          {/* Bullet */}
           <span style={{
             display:      'inline-block',
             width:        dotDiamC,
@@ -129,12 +116,11 @@ function Column({ items, box, dotColor }: ColumnProps) {
             flexShrink:   0,
             marginTop:    dotMTopC,
           }} />
-          {/* Item name — CSS handles wrapping; font is pre-computed to fit */}
           <span style={{
             fontSize:     fontCqw,
-            fontFamily:   '"Book Antiqua","Palatino Linotype",Georgia,serif',
+            fontFamily:   '"Patrick Hand","Comic Sans MS",cursive',
             color:        '#1A0800',
-            lineHeight:   lineHRatio,
+            lineHeight:   lhRatio,
             overflowWrap: 'break-word',
             wordBreak:    'break-word',
             flex:         '1',
@@ -148,17 +134,10 @@ function Column({ items, box, dotColor }: ColumnProps) {
   );
 }
 
-export default function PosterCanvas({
-  config,
-  fontFamily = '"Book Antiqua","Palatino Linotype",Palatino,Georgia,serif',
-}: {
-  config: PosterConfig;
-  fontFamily?: string;
-}) {
+export default function PosterCanvas({ config }: { config: PosterConfig }) {
   const { day, mealType, vegItems, nonVegItems, desserts, accompaniments } = config;
-
   const title   = `${day} ${mealType} Buffet`;
-  const titleFS = title.length > 22 ? 58 : title.length > 18 ? 66 : 74;
+  const titleFS = title.length > 22 ? 95 : title.length > 18 ? 115 : 145;
 
   return (
     <div style={{
@@ -166,9 +145,9 @@ export default function PosterCanvas({
       width:         '100%',
       aspectRatio:   `${TW} / ${TH}`,
       overflow:      'hidden',
-      fontFamily,
       containerType: 'inline-size',
     }}>
+      {/* Template: logo · borders · column headers · food photos · address */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/poster-template.png"
@@ -177,7 +156,7 @@ export default function PosterCanvas({
         draggable={false}
       />
 
-      {/* TITLE */}
+      {/* Title — Cinzel Black, 145px max, auto-shrinks */}
       <div style={{
         position:       'absolute',
         left:           pct(BOXES.title.x, TW),
@@ -190,9 +169,9 @@ export default function PosterCanvas({
       }}>
         <span style={{
           fontSize:   tocqw(titleFS),
-          fontWeight: 'bold',
+          fontWeight: '900',
+          fontFamily: '"Cinzel",Georgia,serif',
           color:      '#7A0000',
-          fontFamily,
           lineHeight: 1.05,
           textAlign:  'center',
           whiteSpace: 'nowrap',
@@ -201,12 +180,13 @@ export default function PosterCanvas({
         </span>
       </div>
 
-      <Column items={vegItems}       box={BOXES.veg}      dotColor="#1A6E1A" />
-      <Column items={accompaniments} box={BOXES.sides}    dotColor="#5C5C2E" />
+      {/* Menu item columns */}
+      <Column items={vegItems}       box={BOXES.veg}      dotColor="#1A6E1A" maxFont={VEG_NONVEG_MAX} minFont={VEG_NONVEG_MIN} />
+      <Column items={accompaniments} box={BOXES.sides}    dotColor="#5C5C2E" maxFont={SIDES_DES_MAX}  minFont={SIDES_DES_MIN}  />
       {desserts.length > 0 && (
-        <Column items={desserts}     box={BOXES.desserts} dotColor="#A05000" />
+        <Column items={desserts}     box={BOXES.desserts} dotColor="#A05000" maxFont={SIDES_DES_MAX}  minFont={SIDES_DES_MIN}  />
       )}
-      <Column items={nonVegItems}    box={BOXES.nonveg}   dotColor="#8B0000" />
+      <Column items={nonVegItems}    box={BOXES.nonveg}   dotColor="#8B0000" maxFont={VEG_NONVEG_MAX} minFont={VEG_NONVEG_MIN} />
     </div>
   );
 }
